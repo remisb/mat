@@ -1,0 +1,10 @@
+port: 8090
+auth-KeyID: 123
+Db:
+  Host: localhost
+  Port: 5432
+  User: postgres
+  Password: postgres
+  Name: postgres
+  DisableTLS: true
+  TtsOff: true
