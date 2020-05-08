@@ -121,6 +121,8 @@ func getTestServer(t *testing.T) *httptest.Server {
 
 	if restaurantServer == nil {
 		test := tests.NewIntegration(t)
+		defer test.Teardown()
+
 		shutdown := make(chan os.Signal, 1)
 
 		api := NewServer("test", shutdown, test.DB)

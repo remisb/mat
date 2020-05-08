@@ -161,7 +161,7 @@ func TestGetTodayVotes(t *testing.T) {
 		Expect().Status(http.StatusOK).
 		JSON().Array()
 
-	rObj.NotEmpty()
+	rObj.Length().Equal(0)
 
 	// /api/v1/restaurant/{restaurantId}/menu/{menuId}/vote
 	rObj1 := e.GET("/votes").
@@ -170,8 +170,9 @@ func TestGetTodayVotes(t *testing.T) {
 		JSON().Array()
 
 	rObj1.Length().Equal(1)
-	rObj1.Element(0).Object().ValueEqual("date", NewDate(2020,3,1))
-	rObj1.Element(0).Object().ValueEqual("id", menuLokys1ID)
+	el1 := rObj1.Element(0).Object()
+	el1.ValueEqual("date", NewDate(2020,3,1))
+	el1.ValueEqual("id", menuLokys1ID)
 
 	rObj2 := e.GET("/votes").
 		WithQuery("date", "2020-03-02").
@@ -179,6 +180,7 @@ func TestGetTodayVotes(t *testing.T) {
 		JSON().Array()
 
 	rObj2.Length().Equal(1)
-	rObj2.Element(0).Object().ValueEqual("date", NewDate(2020,3,2))
-	rObj2.Element(0).Object().ValueEqual("id", menuLokys2ID)
+	el2 := rObj2.Element(0).Object()
+	el2.ValueEqual("date", NewDate(2020,3,2))
+	el2.ValueEqual("id", menuLokys2ID)
 }

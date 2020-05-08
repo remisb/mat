@@ -47,6 +47,8 @@ func getTestServer(t *testing.T) *httptest.Server {
 
 	if userServer == nil {
 		test := tests.NewIntegration(t)
+		defer test.Teardown()
+
 		shutdown := make(chan os.Signal, 1)
 		api := NewServer("test", shutdown, test.DB)
 		userServer = httptest.NewServer(api.Router)
@@ -59,6 +61,8 @@ func getTestServer(t *testing.T) *httptest.Server {
 
 func TestUsers(t *testing.T) {
 	test := tests.NewIntegration(t)
+	defer test.Teardown()
+
 	shutdown := make(chan os.Signal, 1)
 	userAPI := NewServer("test", shutdown, test.DB)
 	server := httptest.NewServer(userAPI.Router)
