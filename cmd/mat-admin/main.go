@@ -31,7 +31,7 @@ func main() {
 	if err := run(cfg); err != nil {
 		message := fmt.Sprintf("error: %s", err.Error())
 		if log.Sugar == nil {
-			fmt.Sprintf(message)
+			fmt.Printf(message)
 			os.Exit(1)
 		}
 		log.Sugar.Error(message)

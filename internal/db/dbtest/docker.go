@@ -9,7 +9,7 @@ import (
 
 // Container tracks information about a docker container started for tests.
 type Container struct {
-	ID string
+	ID   string
 	Host string // IP:Port
 }
 
@@ -18,7 +18,8 @@ func StartContainer(t *testing.T) *Container {
 
 	// > docker run -P -d postgres:11.1-alpine
 	//   009362afa6b043819098cd5d12aa4beba12665f21d050ad2b736863a091324d9
-	cmd := exec.Command("docker", "run", "-P", "-d", "postgres:11.1-alpine")
+	//cmd := exec.Command("docker", "run", "-P", "-d", "postgres:11.1-alpine")
+	cmd := exec.Command("docker", "run", "-p", "5555:5432", "-d", "postgres:11.1-alpine")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
@@ -39,7 +40,7 @@ func StartContainer(t *testing.T) *Container {
 		NetworkSettings struct {
 			Ports struct {
 				TCP5432 []struct {
-					HostIP string `json:"HostIp"`
+					HostIP   string `json:"HostIp"`
 					HostPort string `json:"HostPort"`
 				} `json:"5432/tcp"`
 			} `json:"Ports"`
@@ -52,7 +53,7 @@ func StartContainer(t *testing.T) *Container {
 	network := doc[0].NetworkSettings.Ports.TCP5432[0]
 
 	c := Container{
-		ID: id,
+		ID:   id,
 		Host: network.HostIP + ":" + network.HostPort,
 	}
 

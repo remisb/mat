@@ -7,9 +7,9 @@ type Restaurant struct {
 	ID          string    `db:"restaurant_id" json:"id"`
 	Name        string    `db:"name" json:"name"`
 	Address     string    `db:"address" json:"address"`
-	OwnerUserID string    `db:"owner_user_id" json:"owner_user_id"`
-	DateCreated time.Time `db:"date_created" json:"date_created"`
-	DateUpdated time.Time `db:"date_updated" json:"date_updated"`
+	OwnerUserID string    `db:"owner_user_id" json:"ownerUserId"`
+	DateCreated time.Time `db:"date_created" json:"dateCreated"`
+	DateUpdated time.Time `db:"date_updated" json:"dateUpdated"`
 }
 
 // NewRestaurant is what we require from clients when adding a Restaurant.
@@ -32,22 +32,28 @@ type UpdateRestaurant struct {
 
 type Menu struct {
 	ID           string    `db:"menu_id" json:"id"`
-	RestaurantID string    `db:"restaurant_id" json:"restaurant_id"`
+	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
 	Date         time.Time `db:"date" json:"date"`
 	Menu         string    `db:"menu" json:"menu"`
 	Votes        int       `db:"votes" json:"votes"`
 }
 
 type NewMenu struct {
-	RestaurantID string    `db:"restaurant_id" json:"restaurant_id"`
+	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
 	Date         time.Time `db:"date" json:"date"`
 	Menu         string    `db:"menu" json:"menu"`
 }
 
 type UpdateMenu struct {
 	ID   string    `db:"menu_id" json:"id"`
+	RestaurantID string `db:"restaurant_id" json:"restaurantId"`
 	Menu string    `db:"menu" json:"menu"`
 	Date time.Time `db:"date" json:"date"`
 }
 
-
+type Vote struct {
+	Date         time.Time `db:"date" json:"date"`
+	User         string    `db:"user_id" json:"userId"`
+	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
+	TimeVoted    time.Time `db:"time_voted" json:"timeVoted"`
+}

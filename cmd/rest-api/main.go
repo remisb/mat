@@ -2,10 +2,23 @@ package main
 
 import (
 	"context"
-	"flag"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/jmoiron/sqlx"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/remisb/mat/cmd/rest-api/internal/conf"
+	"github.com/remisb/mat/cmd/rest-api/internal/restaurantapi"
+	"github.com/remisb/mat/cmd/rest-api/internal/userapi"
+	"github.com/remisb/mat/cmd/rest-api/internal/web"
+	"github.com/remisb/mat/internal/db"
+	"github.com/remisb/mat/internal/log"
 	"net/http"
+	_ "net/http/pprof" // Register the pprof handlers
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	//"github.com/remisb/mat/cmd/rest-api/internal/database"
 	//"github.com/remisb/mat/cmd/rest-api/internal/database"
 )
@@ -18,56 +31,153 @@ type contextKey struct {
 	name string
 }
 
-type Server struct {
-	db            *sqlx.DB
-}
-
 func main() {
-	var (
-		addr = flag.String("addr", ":8080", "endpoint address")
-		mongo = flag.String("mongo", "localhost", "mongodb address")
-	)
-
-	log.Println("Dialing PostgreSQL DB", *mongo)
-	//dbc, err := database.Open(cfg)
-	//if err != nil {
-	//	log.Fatalln("failed to connect to mongo:", err)
-	//}
-	//defer dbc.Close()
-
-	//database.Open()
-	//log.Println("Dialing mongo", *mongo)
-	//db, err := mgo.Dial(*mongo)
-	//if err != nil {
-	//	log.Fatalln("failed to connect to mongo:", err)
-	//}
-	//defer db.Close()
-
-	s := &Server{
-		//db: dbc,
+	config := conf.NewConfig()
+	if err := startAPIServerAndWait(*config); err != nil {
+		log.Sugar.Errorf("error :", err)
+		os.Exit(1)
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/polls/",
-		withCORS(withAPIKey(s.handlePolls)))
-	log.Println("Starting web server on", *addr)
-	http.ListenAndServe(":8080", mux)
-	log.Println("Stopping...")
 }
 
-func (s *Server) handlePolls(w http.ResponseWriter, r *http.Request) {
+func startDatabase(dbConf db.Config) (*sqlx.DB, error) {
+	log.Sugar.Infof("main : Started : Initializing database support")
 
+	dbx, err := db.Open(dbConf)
+	if err != nil {
+		return nil, errors.Wrap(err, "connecting to db")
+	}
+
+	return dbx, nil
 }
 
-func APIKey(ctx context.Context) (string, bool) {
-	key, ok := ctx.Value(contextKeyAPIKey).(string)
-	return key, ok
+func startAPIServerAndWait(config conf.Config) error {
+	dbx, err := startDatabase(config.Db)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		log.Sugar.Infof("main : Database Stopping : %s", config.Db.Host)
+		dbx.Close()
+	}()
+
+	startDebugService(config)
+
+	// Make a channel to listen for an interrupt or terminate signal from the OS.
+	// Use a buffered channel because the signal package requires it.
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+
+	// Make a channel to listen for errors coming from the listener. Use a
+	// buffered channel so the goroutine can exit if we don't collect this error.
+	serverErrors := make(chan error, 1)
+
+	apiServer := startAPIServer(config, dbx, shutdown, serverErrors)
+	if err := waitShutdown(config.Server, apiServer, serverErrors, shutdown); err != nil {
+		return err
+	}
+	return nil
+}
+
+func startDebugService(config conf.Config) {
+	// /debug/pprof - Added to the default mux by importing the net/http/pprof package.
+	// /debug/vars - Added to the default mux by importing the expvar package.
+
+	log.Sugar.Infof("main : Started : Initializing debug support")
+
+	go func() {
+		log.Sugar.Infof("main : Degub Listening %s", config.Server.DebugHost)
+		log.Sugar.Infof("main : Debug Listener closed : %v", http.ListenAndServe(config.Server.DebugHost, http.DefaultServeMux))
+	}()
+}
+
+func startAPIServer(cfg conf.Config, dbx *sqlx.DB,
+	shutdownChan chan os.Signal,
+	serverErrors chan error) *http.Server {
+
+	r := chi.NewRouter()
+	// A good base middleware stack
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	// Set a timeout value on the request context (ctx), that will signal
+	// through ctx.Done() that the request has timed out and further
+	// processing should be stopped.
+	r.Use(middleware.Timeout(60 * time.Second))
+
+	apiServer := userapi.NewServer("development", shutdownChan, dbx)
+    restaurantServer := restaurantapi.NewServer("development", shutdownChan, dbx)
+	r.Route("/api/v1/", func(r chi.Router) {
+		r.Mount("/users", apiServer.Router)
+		r.Mount("/restaurant", restaurantServer.Router)
+	})
+
+	api := http.Server{
+		Addr:         cfg.Server.Addr(),
+		Handler:      r,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
+	}
+
+	// Start the service listening for requests.
+	go func() {
+		log.Sugar.Infof("main : API listening on %s", api.Addr)
+		serverErrors <- api.ListenAndServe()
+	}()
+	return &api
+}
+
+// paginate is a stub, but very possible to implement middleware logic
+// to handle the request params for handling a paginated request.
+func paginate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// just a stub.. some ideas are to look at URL query params for something like
+		// the page number, or the limit, and send a query cursor down the chain
+		next.ServeHTTP(w, r)
+	})
+}
+
+func waitShutdown(serverConf conf.SrvConfig, apiServer *http.Server, serverErrors chan error, shutdown chan os.Signal) error {
+	// =========================================================================
+	// Shutdown
+
+	// Blocking main and waiting for shutdown.
+	select {
+	case err := <-serverErrors:
+		return errors.Wrap(err, "server error")
+
+	case sig := <-shutdown:
+		log.Sugar.Infof("main : %v : Start shutdown", sig)
+
+		// Give outstanding requests a deadline for completion.
+		ctx, cancel := context.WithTimeout(context.Background(), serverConf.ShutdownTimeout)
+		defer cancel()
+
+		// Asking listener to shutdown and load shed.
+		err := apiServer.Shutdown(ctx)
+		if err != nil {
+			log.Sugar.Infof("main : Graceful shutdown did not complete in %v : %v", serverConf.ShutdownTimeout, err)
+			err = apiServer.Close()
+		}
+
+		// Log the status of this shutdown.
+		switch {
+		case sig == syscall.SIGSTOP:
+			return errors.New("integrity issue caused shutdown")
+		case err != nil:
+			return errors.Wrap(err, "could not stop server gracefully")
+		}
+	}
+	return nil
 }
 
 func withAPIKey(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := r.URL.Query().Get("key")
 		if !isValidAPIKey(key) {
-			respondErr(w, r, http.StatusUnauthorized, "invalid API key")
+			web.RespondError(w, r, http.StatusUnauthorized, "invalid API key")
 			return
 		}
 		ctx := context.WithValue(r.Context(), contextKeyAPIKey, key)

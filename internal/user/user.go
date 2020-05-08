@@ -7,45 +7,50 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/remisb/mat/internal/auth"
+	"github.com/remisb/mat/internal/db"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
-var (
-	ErrNotFound = errors.New("User not found")
-	ErrInvalidID = errors.New("ID is not in its proper form")
-	ErrAuthenticationFailure = errors.New("AuthenticationFailed")
-	ErrForbidden = errors.New("Attempted action is not allowed")
-)
+const pageSize = 10
+const queryPaged = `SELECT * FROM users OFFSET $1 LIMIT $2`
+const queryAll = `SELECT * FROM users`
+
+// ListPaged retrieves a list of existing users from the database with pagination.
+func ListPaged(ctx context.Context, db *sqlx.DB, page int) ([]User, error) {
+	offset := pageSize * (page -1)
+	users := []User{}
+	if err := db.SelectContext(ctx, &users, queryPaged, offset, pageSize); err != nil {
+		return nil, errors.Wrap(err, "selecting users")
+	}
+	return users, nil
+}
 
 // List retrieves a list of existing users from the database.
 func List(ctx context.Context, db *sqlx.DB) ([]User, error) {
 	users := []User{}
-	const q = `SELECT * FROM users`
-
-	if err := db.SelectContext(ctx, &users, q); err != nil {
+	if err := db.SelectContext(ctx, &users, queryAll); err != nil {
 		return nil, errors.Wrap(err, "selecting users")
 	}
-
 	return users, nil
 }
 
 // Retrieve gets the specified user from the database.
-func Retrieve(ctx context.Context, claims auth.Claims, db *sqlx.DB, id string) (*User, error) {
+func Retrieve(ctx context.Context, claims auth.Claims, dbx *sqlx.DB, id string) (*User, error) {
 	if _, err := uuid.Parse(id); err != nil {
-		return nil, ErrInvalidID
+		return nil, db.ErrInvalidID
 	}
 
 	// If you are not an admin and looking to retrieve someone else then you are rejected.
 	if !claims.HasRole(auth.RoleAdmin) && claims.Subject != id {
-		return nil, ErrForbidden
+		return nil, db.ErrForbidden
 	}
 
 	var u User
 	const q = `SELECT * FROM users WHERE user_id = $1`
-	if err := db.GetContext(ctx, &u, q, id); err != nil {
+	if err := dbx.GetContext(ctx, &u, q, id); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
+			return nil, db.ErrNotFound
 		}
 
 		return nil, errors.Wrapf(err, "selecting user %q", id)
@@ -100,16 +105,16 @@ func Create(ctx context.Context, db *sqlx.DB, name, email, password string, role
 // Authenticate finds a user by their email and verifies their password. On
 // success it returns a Claims value representing this user. The claims can be
 // used to generate a token for future authentication.
-func Authenticate(ctx context.Context, db *sqlx.DB, now time.Time, email, password string) (auth.Claims, error) {
+func Authenticate(ctx context.Context, dbx *sqlx.DB, now time.Time, email, password string) (auth.Claims, error) {
 	const q = `SELECT * FROM users WHERE email = $1`
 
 	var u User
-	if err := db.GetContext(ctx, &u, q, email); err != nil {
+	if err := dbx.GetContext(ctx, &u, q, email); err != nil {
 
 		// Normally we would return ErrNotFound in this scenario but we do not want
 		// to leak to an unauthenticated user which emails are in the system.
 		if err == sql.ErrNoRows {
-			return auth.Claims{}, ErrAuthenticationFailure
+			return auth.Claims{}, db.ErrAuthenticationFailure
 		}
 
 		return auth.Claims{}, errors.Wrap(err, "selecting single user")
@@ -118,12 +123,12 @@ func Authenticate(ctx context.Context, db *sqlx.DB, now time.Time, email, passwo
 	// Compare the provided password with the saved hash. Use the bcrypt
 	// comparison function so it is cryptographically secure.
 	if err := bcrypt.CompareHashAndPassword(u.PasswordHash, []byte(password)); err != nil {
-		return auth.Claims{}, ErrAuthenticationFailure
+		return auth.Claims{}, db.ErrAuthenticationFailure
 	}
 
 	// If we are this far the request is valid. Create some claims for the user
 	// and generate their token.
-	claims := auth.NewClaims(u.ID, u.Roles, now, time.Hour)
+	claims := auth.NewClaims(u.ID, u.Name, u.Email, u.Roles, now, time.Hour)
 	return claims, nil
 }
 
@@ -170,14 +175,13 @@ func Update(ctx context.Context, claims auth.Claims, db *sqlx.DB, id string, ema
 }
 
 // Delete removes a user from the database.
-func Delete(ctx context.Context, db *sqlx.DB, id string) error {
+func Delete(ctx context.Context, dbx *sqlx.DB, id string) error {
 	if _, err := uuid.Parse(id); err != nil {
-		return ErrInvalidID
+		return db.ErrInvalidID
 	}
 
 	const q = `DELETE FROM users WHERE user_id = $1`
-
-	if _, err := db.ExecContext(ctx, q, id); err != nil {
+	if _, err := dbx.ExecContext(ctx, q, id); err != nil {
 		return errors.Wrapf(err, "deleting user %s", id)
 	}
 

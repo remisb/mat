@@ -5,18 +5,28 @@ import (
 	"time"
 )
 
+// These are the expected values for Claims.Roles.
+const (
+	RoleAdmin = "ADMIN"
+	RoleUser  = "USER"
+)
+
 // Claims represents the authorization claims transmitted via a JWT.
 type Claims struct {
 	Roles []string `json:"roles"`
+	Name string `json:"name"`
+	Email string `json:"email"`
 	jwt.StandardClaims
 }
 
 // NewClaims constructs a Claims value for the identified user. The Claims
 // expire within a specified duration of the provided time. Additional fields
 // of the Claims can be set after calling NewClaims is desired.
-func NewClaims(subject string, roles []string, now time.Time, expires time.Duration) Claims {
+func NewClaims(subject, name, email string, roles []string, now time.Time, expires time.Duration) Claims {
 	c := Claims{
 		Roles: roles,
+		Name: name,
+		Email: email,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   subject,
 			IssuedAt:  now.Unix(),

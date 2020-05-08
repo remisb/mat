@@ -2,10 +2,8 @@ package tests
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
+	"github.com/go-chi/jwtauth"
 	"github.com/jmoiron/sqlx"
-	"github.com/remisb/mat/internal/auth"
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/db/dbtest"
 	logz "github.com/remisb/mat/internal/log"
@@ -17,14 +15,17 @@ import (
 	"time"
 )
 
+// Test structure is used to perform Integration tests.
 type Test struct {
-	DB            *sqlx.DB
-	Log           *zap.SugaredLogger
-	Authenticator *auth.Authenticator
-	t             *testing.T
-	cleanup       func()
-	UserToken     string
-	AdminToken    string
+	DB         *sqlx.DB
+	Log        *zap.SugaredLogger
+	t          *testing.T
+	cleanup    func()
+	tokenAuth  *jwtauth.JWTAuth
+	UserToken  string
+	User1Token string
+	User2Token string
+	AdminToken string
 }
 
 func NewUnit(t *testing.T) (*sqlx.DB, func()) {
@@ -76,6 +77,7 @@ func NewUnit(t *testing.T) (*sqlx.DB, func()) {
 	return db, teardown
 }
 
+// NewIntegration provides a Test struct setup for integration testing.
 func NewIntegration(t *testing.T) *Test {
 	t.Helper()
 
@@ -87,36 +89,26 @@ func NewIntegration(t *testing.T) *Test {
 	// Create the logger to use.
 	//logger := log.New(os.Stdout, "TEST : ", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 
-	// Create RSA keys to enable authentication in our service.
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Build an authenticator using this static key.
-	kid := "4754d86b-7a6d-4df5-9c65-224741361492"
-	kf := auth.NewSimpleKeyLookupFunc(kid, key.Public().(*rsa.PublicKey))
-	authenticator, err := auth.NewAuthenticator(key, kid, "RS256", kf)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	userToken := Token(t, db, authenticator, "user@example.com", "gophers")
-	adminToken := Token(t, db, authenticator, "admin@example.com", "gophers")
+	//tokenAuth := web.TokenAuth
+	tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
 
 	return &Test{
-		DB:            db,
-		Log:           logz.Sugar,
-		Authenticator: authenticator,
-		t:             t,
-		cleanup:       cleanup,
-		UserToken:     userToken,
-		AdminToken:    adminToken,
+		DB:         db,
+		Log:        logz.Sugar,
+		t:          t,
+		cleanup:    cleanup,
+		UserToken:  Token(t, db, tokenAuth, "user@example.com", "gophers"),
+		User1Token: Token(t, db, tokenAuth, "user1@example.com", "gophers"),
+		User2Token: Token(t, db, tokenAuth, "user2@example.com", "gophers"),
+		AdminToken: Token(t, db, tokenAuth, "admin@example.com", "gophers"),
+		tokenAuth:  tokenAuth,
 	}
 }
 
 // Token generates an authenticated token for a user.
-func Token(t *testing.T, DB *sqlx.DB, authenticator *auth.Authenticator, email, pass string) string {
+func Token(t *testing.T, DB *sqlx.DB, tokenAuth *jwtauth.JWTAuth, email, pass string) string {
 	t.Helper()
 
 	claims, err := user.Authenticate(
@@ -127,12 +119,12 @@ func Token(t *testing.T, DB *sqlx.DB, authenticator *auth.Authenticator, email, 
 		t.Fatal(err)
 	}
 
-	tkn, err := authenticator.GenerateToken(claims)
+	_, tknString, err := tokenAuth.Encode(claims)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return tkn
+	return tknString
 }
 
 // Teardown releases any resources used for the test.
@@ -152,10 +144,10 @@ func (test *Test) Token(email, pass string) string {
 		test.t.Fatal(err)
 	}
 
-	tkn, err := test.Authenticator.GenerateToken(claims)
+	_, tknString, err := test.tokenAuth.Encode(claims)
 	if err != nil {
 		test.t.Fatal(err)
 	}
 
-	return tkn
+	return tknString
 }

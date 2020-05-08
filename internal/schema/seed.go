@@ -2,6 +2,7 @@ package schema
 
 import "github.com/jmoiron/sqlx"
 
+// Seed is used to seed database with initial data.
 func Seed(db *sqlx.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -24,14 +25,16 @@ INSERT INTO restaurant (restaurant_id, name, address, owner_user_id, date_create
   ('5828612a-1f8a-403c-b6d1-6cb66fbf0c66', 'Lokys', 'Stiklių g. 10, Vilnius 01131', '5cf37266-3473-4006-984f-9325122678b7', '2019-03-24 00:00:00', '2019-03-24 00:00:00')
   ON CONFLICT DO NOTHING;
 
-INSERT INTO menu (restaurant_id, date, menu, votes) VALUES
-	('5828612a-1f8a-403c-b6d1-6cb66fbf0c66', '2020-03-01 00:00:00', 'Lokys menu for 2020-03-01', 0),
-	('5828612a-1f8a-403c-b6d1-6cb66fbf0c66', '2020-03-02 00:00:00', 'Lokys menu for 2020-03-02', 0)
+INSERT INTO menu (menu_id, restaurant_id, date, menu, votes) VALUES
+	('4058d981-0df1-45de-807e-b8e90bcb2d80', '5828612a-1f8a-403c-b6d1-6cb66fbf0c66', '2020-03-01 00:00:00', 'Lokys menu for 2020-03-01', 0),
+	('f70a7f9a-e41a-47e5-b56c-444646df77bc', '5828612a-1f8a-403c-b6d1-6cb66fbf0c66', '2020-03-02 00:00:00', 'Lokys menu for 2020-03-02', 0)
 	ON CONFLICT DO NOTHING;
 
 -- Create admin and regular User with password "gophers"
 INSERT INTO users (user_id, name, email, roles, password_hash, date_created, date_updated) VALUES
 	('5cf37266-3473-4006-984f-9325122678b7', 'Admin Gopher', 'admin@example.com', '{ADMIN,USER}', '$2a$10$1ggfMVZV6Js0ybvJufLRUOWHS5f6KneuP0XwwHpJ8L8ipdry9f2/a', '2019-03-24 00:00:00', '2019-03-24 00:00:00'),
-	('45b5fbd3-755f-4379-8f07-a58d4a30fa2f', 'User Gopher', 'user@example.com', '{USER}', '$2a$10$9/XASPKBbJKVfCAZKDH.UuhsuALDr5vVm6VrYA9VFR8rccK86C1hW', '2019-03-24 00:00:00', '2019-03-24 00:00:00')
+	('45b5fbd3-755f-4379-8f07-a58d4a30fa2f', 'User Gopher', 'user@example.com', '{USER}', '$2a$10$9/XASPKBbJKVfCAZKDH.UuhsuALDr5vVm6VrYA9VFR8rccK86C1hW', '2019-03-24 00:00:00', '2019-03-24 00:00:00'),
+	('b05d8e21-87c6-4e99-a853-54abb4379668', 'User 1 Gopher', 'user1@example.com', '{USER}', '$2a$10$9/XASPKBbJKVfCAZKDH.UuhsuALDr5vVm6VrYA9VFR8rccK86C1hW', '2019-03-24 00:00:00', '2019-03-24 00:00:00'),
+	('f75fb548-3914-43b0-a5df-8522b650872c', 'User 2 Gopher', 'user2@example.com', '{USER}', '$2a$10$9/XASPKBbJKVfCAZKDH.UuhsuALDr5vVm6VrYA9VFR8rccK86C1hW', '2019-03-24 00:00:00', '2019-03-24 00:00:00')
 	ON CONFLICT DO NOTHING;
 `

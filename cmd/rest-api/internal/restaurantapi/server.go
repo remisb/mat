@@ -1,11 +1,10 @@
-package userapi
+package restaurantapi
 
 import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/jwtauth"
 	"github.com/jmoiron/sqlx"
 	"github.com/remisb/mat/cmd/rest-api/internal/web"
-	"net/http"
 	"os"
 )
 
@@ -26,15 +25,4 @@ func NewServer(build string, shutdown chan os.Signal, db *sqlx.DB) *Server {
 
 	s.routes()
 	return &s
-}
-
-func (s Server) encodeBody(w http.ResponseWriter, r *http.Request, v interface{}) error {
-	return web.EncodeBody(w, r, v)
-}
-
-func Respond(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
-	w.WriteHeader(status)
-	if data != nil {
-		web.EncodeBody(w, r, data)
-	}
 }

@@ -2,9 +2,21 @@ package db
 
 import (
 	"context"
+	"errors"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // The database driver in use.
 	"net/url"
+)
+
+var (
+	// ErrNotFound used when user is not found
+	ErrNotFound              = errors.New("User not found")
+	// ErrInvalidID used when passed ID has invalid format
+	ErrInvalidID             = errors.New("ID is not in its proper form")
+	// ErrAuthenticationFailure used when authentication has failed
+	ErrAuthenticationFailure = errors.New("AuthenticationFailed")
+	// ErrForbidden used when forbitten action was tryed to perform.
+	ErrForbidden             = errors.New("Attempted action is not allowed")
 )
 
 type Config struct {

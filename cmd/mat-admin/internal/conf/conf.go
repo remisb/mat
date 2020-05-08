@@ -16,17 +16,20 @@ const (
 )
 
 var initConfigOnce sync.Once
+
+// Config struct is used to store current application configuration.
 type Config struct {
-	Db     db.Config
-	Args   Args
+	Db   db.Config
+	Args Args
 }
 
+// NewConfig initializes and returns newly created Config struct.
 func NewConfig() *Config {
 	initCliFlags()
 
 	return &Config{
-		Db:     dbConfig(),
-		Args:   NewConfigArgs(os.Args[1:]),
+		Db:   dbConfig(),
+		Args: NewConfigArgs(os.Args[1:]),
 	}
 }
 

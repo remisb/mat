@@ -8,6 +8,7 @@ type Args struct {
 	ConfigPath string
 }
 
+// NewConfigArgs create a new Args struct from
 func NewConfigArgs(args []string) Args {
 	return Args{
 		Args: args,
@@ -25,4 +26,3 @@ func (a Args) Num(i int) string {
 	}
 	return a.Args[i]
 }
-

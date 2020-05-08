@@ -5,19 +5,21 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// Migrate is used to perform database migration.
 func Migrate(db *sqlx.DB) error {
 	driver := darwin.NewGenericDriver(db.DB, darwin.PostgresDialect{})
 	d := darwin.New(driver, migrations, nil)
 	return d.Migrate()
 }
 
-var migrations = []darwin.Migration {
+var migrations = []darwin.Migration{
 	{
-		Version: 1,
+		Version:     1,
 		Description: "Add restaurant", // Add restaurant
 		Script: `
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE restaurant (
-	restaurant_id UUID,
+	restaurant_id UUID NOT NULL DEFAULT uuid_generate_v4(),
 	name          TEXT NOT NULL,
 	address       TEXT,
     owner_user_id TEXT NOT NULL,
@@ -30,12 +32,12 @@ CREATE TABLE restaurant (
 		Description: "Add menu",
 		Script: `
 CREATE TABLE menu (
-		menu_id       UUID,
+		menu_id       UUID NOT NULL DEFAULT uuid_generate_v4(),
 		restaurant_id UUID,
 		date          DATE NOT NULL DEFAULT CURRENT_DATE,
 		menu          VARCHAR(1024),
 		votes         INTEGER,
-        PRIMARY KEY(restaurant_id, date)
+        PRIMARY KEY(menu_id)
 )`},
 	{
 		Version:     3,

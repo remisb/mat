@@ -1,4 +1,4 @@
-package main
+package userapi
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/auth"
+	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/user"
 	"net/http"
 	"time"
@@ -18,29 +19,29 @@ func (s *Server) handlePolls(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUserDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userId := chi.URLParam(r, "id")
-		err := user.Delete(ctx, s.db, userId)
+		userID := chi.URLParam(r, "id")
+		err := user.Delete(ctx, s.db, userID)
 		if err != nil {
 			switch err {
-			case user.ErrInvalidID:
+			case db.ErrInvalidID:
 				err := web.NewRequestError(err, http.StatusBadRequest)
-				s.respondError(w, r, http.StatusBadRequest, err)
+				web.RespondError(w, r, http.StatusBadRequest, err)
 				return
-			case user.ErrNotFound:
+			case db.ErrNotFound:
 				err := web.NewRequestError(err, http.StatusNotFound)
-				s.respondError(w, r, http.StatusNotFound, err)
+				web.RespondError(w, r, http.StatusNotFound, err)
 				return
-			case user.ErrForbidden:
+			case db.ErrForbidden:
 				err := web.NewRequestError(err, http.StatusForbidden)
-				s.respondError(w, r, http.StatusForbidden, err)
+				web.RespondError(w, r, http.StatusForbidden, err)
 				return
 			default:
-				err := errors.Wrapf(err, "Id: %s", userId)
-				s.respondError(w, r, http.StatusInternalServerError, err)
+				err := errors.Wrapf(err, "Id: %s", userID)
+				web.RespondError(w, r, http.StatusInternalServerError, err)
 			}
 		}
 
-		s.respond(w, r, http.StatusNoContent, nil)
+		web.Respond(w, r, http.StatusNoContent, nil)
 	}
 }
 
@@ -61,13 +62,13 @@ func (s *Server) handleUserUpdate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var updateUser request
-		err := s.decodeBody(r, &updateUser)
+		err := web.DecodeBody(r, &updateUser)
 		if err != nil {
-			s.respondError(w, r, http.StatusBadRequest, errors.Wrap(err, ""))
+			web.RespondError(w, r, http.StatusBadRequest, errors.Wrap(err, ""))
 			return
 		}
 
-		if err := decodeBody(r, &updateUser); err != nil {
+		if err := web.DecodeBody(r, &updateUser); err != nil {
 
 		}
 	}
@@ -75,36 +76,31 @@ func (s *Server) handleUserUpdate() http.HandlerFunc {
 
 func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 	var u user.NewUser
-	if err := decodeBody(r, &u); err != nil {
-		respondErr(w, r, http.StatusBadRequest, "failed to read user from request", err)
+	if err := web.DecodeBody(r, &u); err != nil {
+		web.RespondError(w, r, http.StatusBadRequest, "failed to read user from request", err)
 		return
 	}
 
 	if u.Password != u.PasswordConfirm {
-		respondErr(w, r, http.StatusBadRequest, "password and password confirm are not equal")
+		web.RespondError(w, r, http.StatusBadRequest, "password and password confirm are not equal")
 		return
 	}
 
-	//apiKey, ok := APIKey(r.Context())
-	//if ok {
-	//
-	//}
-
 	uDb, err := user.Create(r.Context(), s.db, u.Name, u.Email, u.Password, u.Roles, time.Now())
 	if err != nil {
-		respondErr(w, r, http.StatusInternalServerError, err)
+		web.RespondError(w, r, http.StatusInternalServerError, err)
 		fmt.Println("User created with id:", uDb.ID)
 	}
 
-	w.Header().Set("Location", "/api/v1/users/" + uDb.ID)
-	s.respond(w, r, http.StatusCreated, nil)
+	//w.Header().Set("Location", "/api/v1/users/" + uDb.ID)
+	web.Respond(w, r, http.StatusCreated, uDb)
 }
 
-func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleToken2Get(w http.ResponseWriter, r *http.Request) {
 	email, pass, ok := r.BasicAuth()
 	if !ok {
 		err := errors.New("must provide email and password in Basic auth")
-		s.respondError(w, r, http.StatusUnauthorized, err)
+		web.RespondError(w, r, http.StatusUnauthorized, err)
 		return
 	}
 
@@ -113,69 +109,178 @@ func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 	claims, err := user.Authenticate(ctx, s.db, now, email, pass)
 	if err != nil {
 		switch err {
-		case user.ErrAuthenticationFailure:
-			s.respondError(w, r, http.StatusUnauthorized, err)
+		case db.ErrAuthenticationFailure:
+			web.RespondError(w, r, http.StatusUnauthorized, err)
 			return
 		default:
 			err = errors.Wrap(err, "authenticating")
-			s.respondError(w, r, http.StatusInternalServerError, err)
+			web.RespondError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+	}
+
+	token, tokenString, err := s.tokenAuth.Encode(claims)
+	if err != nil {
+		err = errors.Wrap(err, "token encode")
+		web.RespondError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+	fmt.Printf("DEBUG: a sample jwt is %s\n \tclaim: %v\n", tokenString, token)
+
+	var tkn struct {
+		Token string `json:"token"`
+	}
+	tkn.Token = tokenString
+	web.Respond(w, r, http.StatusOK, tkn)
+}
+
+func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
+	email, pass, ok := r.BasicAuth()
+	if !ok {
+		err := errors.New("must provide email and password in Basic auth")
+		web.RespondError(w, r, http.StatusUnauthorized, err)
+		return
+	}
+
+	ctx := r.Context()
+	now := time.Now()
+	claims, err := user.Authenticate(ctx, s.db, now, email, pass)
+	if err != nil {
+		switch err {
+		case db.ErrAuthenticationFailure:
+			web.RespondError(w, r, http.StatusUnauthorized, err)
+			return
+		default:
+			err = errors.Wrap(err, "authenticating")
+			web.RespondError(w, r, http.StatusInternalServerError, err)
+			return
+		}
+	}
+
+	token, tokenString, err := s.tokenAuth.Encode(claims)
+	if err != nil {
+		err = errors.Wrap(err, "token encode")
+		web.RespondError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+	fmt.Printf("DEBUG: a sample jwt is %s\n \tclaim: %v\n", tokenString, token)
+
+	var tkn struct {
+		Token string `json:"token"`
+	}
+	tkn.Token = tokenString
+	web.Respond(w, r, http.StatusOK, tkn)
+}
+
+func (s *Server) handleTokenGetOriginal(w http.ResponseWriter, r *http.Request) {
+	email, pass, ok := r.BasicAuth()
+	if !ok {
+		err := errors.New("must provide email and password in Basic auth")
+		web.RespondError(w, r, http.StatusUnauthorized, err)
+		return
+	}
+
+	ctx := r.Context()
+	now := time.Now()
+	claims, err := user.Authenticate(ctx, s.db, now, email, pass)
+	if err != nil {
+		switch err {
+		case db.ErrAuthenticationFailure:
+			web.RespondError(w, r, http.StatusUnauthorized, err)
+			return
+		default:
+			err = errors.Wrap(err, "authenticating")
+			web.RespondError(w, r, http.StatusInternalServerError, err)
 		}
 	}
 
 	var tkn struct {
 		Token string `json:"token"`
 	}
-	tkn.Token, err = s.Authenticator.GenerateToken(claims)
+	_, tkn.Token, err = s.tokenAuth.Encode(claims)
 	if err != nil {
 		err = errors.Wrap(err, "generating token")
-		s.respondError(w, r, http.StatusInternalServerError, err)
+		web.RespondError(w, r, http.StatusInternalServerError, err)
 		return
 	}
-	s.respond(w, r, http.StatusOK, tkn)
+	web.Respond(w, r, http.StatusOK, tkn)
+}
+
+func (s *Server) handleUsersPagedGet(w http.ResponseWriter, r *http.Request) {
+	// TODO add pagination
+	users, err := user.List(r.Context(), s.db)
+	if err != nil {
+		web.RespondError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	web.Respond(w, r, http.StatusOK, users)
 }
 
 func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
 	users, err := user.List(r.Context(), s.db)
 	if err != nil {
-		respondErr(w, r, http.StatusInternalServerError, err)
+		web.RespondError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 
-	respond(w, r, http.StatusOK, users)
+	web.Respond(w, r, http.StatusOK, users)
 }
 
 func (s *Server) handleUserGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userId := chi.URLParam(r, "id")
+	userID := chi.URLParam(r, "id")
 	claims, ok := ctx.Value(auth.Key).(auth.Claims)
 	if !ok {
-		err := errors.New("claims missing from context")
-		s.respondError(w, r, http.StatusInternalServerError, err)
+		web.RespondError(w, r, http.StatusUnauthorized, web.ErrNoTokenFound)
 		return
 	}
 
-	usr, err := user.Retrieve(ctx, claims, s.db, userId)
+	usr, err := user.Retrieve(ctx, claims, s.db, userID)
 	if err != nil {
 		switch err {
-		case user.ErrInvalidID:
+		case db.ErrInvalidID:
 			err := web.NewRequestError(err, http.StatusBadRequest)
-			s.respondError(w, r, http.StatusBadRequest, err)
+			web.RespondError(w, r, http.StatusBadRequest, err)
 			return
-		case user.ErrNotFound:
+		case db.ErrNotFound:
 			err := web.NewRequestError(err, http.StatusNotFound)
-			s.respondError(w, r, http.StatusNotFound, err)
+			web.RespondError(w, r, http.StatusNotFound, err)
 			return
-		case user.ErrForbidden:
+		case db.ErrForbidden:
 			err := web.NewRequestError(err, http.StatusForbidden)
-			s.respondError(w, r, http.StatusForbidden, err)
+			web.RespondError(w, r, http.StatusForbidden, err)
 			return
 		default:
-			err := errors.Wrapf(err, "Id: %s", userId)
-			s.respondError(w, r, http.StatusForbidden, err)
+			err := errors.Wrapf(err, "Id: %s", userID)
+			web.RespondError(w, r, http.StatusForbidden, err)
 			return
 		}
 	}
-	s.respond(w, r, http.StatusOK, usr)
+	web.Respond(w, r, http.StatusOK, usr)
+}
 
+func (s *Server) handleHealthGet(w http.ResponseWriter, r *http.Request) {
+	health := struct {
+		Version string `json:"version"`
+		Status  string `json:"status"`
+	}{
+		Version: s.build,
+	}
+
+	ctx := r.Context()
+	// Check if the database is ready.
+	if err := db.StatusCheck(ctx, s.db); err != nil {
+
+		// If the database is not ready we will tell the client and use a 500
+		// status. Do not respond by just returning an error because further up in
+		// the call stack will interpret that as an unhandled error.
+		health.Status = "db not ready"
+		web.Respond(w, r, http.StatusInternalServerError, health)
+		return
+	}
+
+	health.Status = "ok"
+	web.Respond(w, r, http.StatusOK, health)
 }
