@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 export PROJECT = mat-api
 
 .DEFAULT_GOAL := help

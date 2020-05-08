@@ -10,6 +10,7 @@ const (
 	menuLokys1ID = "4058d981-0df1-45de-807e-b8e90bcb2d80"
 	menuLokys2ID = "f70a7f9a-e41a-47e5-b56c-444646df77bc"
 )
+
 func TestVoteAnonymous(t *testing.T) {
 	server := getTestServer(t)
 	e := httpexpect.New(t, server.URL)
@@ -24,8 +25,9 @@ func TestVoteAnonymous(t *testing.T) {
 
 	respObj.Value("error").Object().ValueEqual("message", "no token found")
 }
-
-func TestVoteUnauthorizedUser(t *testing.T) {
+// Voting for menu without token should return HTTP Status
+// Unauthorised 401
+func TestDoVoteWithoutToken(t *testing.T) {
 	server := getTestServer(t)
 	e := httpexpect.New(t, server.URL)
 
@@ -46,26 +48,30 @@ func TestVoteUnauthorizedUser(t *testing.T) {
 		Path("$.error.message").Equal("no token found")
 }
 
-func TestVoteAuthorizedSecondPerDayForbitten(t *testing.T) {
+// GIVEN: Authenticated User Is allowed to vote once per day.
+// WHEN:  The Same User votes second time for the same day
+// THEN:  Second vote should be rejected
+func TestVoteAuthorizedSecondPerDayForbidden(t *testing.T) {
 	server := getTestServer(t)
-	e := httpexpect.New(t, server.URL)
+	e := httpexpect.New(t, server.URL).
+		Builder(func (req *httpexpect.Request) {
+			req.WithHeader("Authorization", "Bearer "+user1Token)
+		})
 
 	// /api/v1/restaurant/{restaurantId}/menu/{menuId}/vote
-	o := e.POST("/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
+	e.POST("/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
 		WithQuery("date", "2020-03-01").
-		WithHeader("Authorization", "Bearer "+user1Token).
 		Expect().Status(http.StatusCreated).
-		JSON().Object()
-	o.ValueEqual("success", "vote accepted")
+		JSON().Object().
+		ValueEqual("success", "vote accepted")
 
 	// /api/v1/restaurant/{restaurantId}/menu/{menuId}/vote
-	o = e.POST("/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
+	e.POST("/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
 		WithQuery("date", "2020-03-01").
-		WithHeader("Authorization", "Bearer "+user1Token).
-		Expect().Status(http.StatusCreated).
-		JSON().Object()
-	s := o.Raw()
-	t.Logf("should fail vote: %v", s)
+		Expect().Status(http.StatusForbidden).
+		JSON().Object().
+		Path("$.error.message").
+		Equal("user has already voted today")
 }
 
 func TestVoteAuthorizedTwoPerDay(t *testing.T) {
@@ -90,23 +96,6 @@ func TestVoteAuthorizedTwoPerDay(t *testing.T) {
 	// /api/v1/restaurant/{restaurantId}/menu/{menuId}/vote
 	o := e.POST("/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
 		WithQuery("date", "2020-03-01").
-		WithHeader("Authorization", "Bearer "+user1Token).
-		Expect().Status(http.StatusCreated).
-		JSON().Object()
-	o.ValueEqual("success", "vote accepted")
-
-	// /api/v1/restaurant/{restaurantId}/menu/{menuId}/vote
-	o = e.POST("/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
-		WithQuery("date", "2020-03-01").
-		WithHeader("Authorization", "Bearer "+user1Token).
-		Expect().Status(http.StatusCreated).
-		JSON().Object()
-	s := o.Raw()
-	t.Logf("should fail vote: %v", s)
-
-	// /api/v1/restaurant/{restaurantId}/menu/{menuId}/vote
-	o = e.POST("/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
-		WithQuery("date", "2020-03-01").
 		WithHeader("Authorization", "Bearer "+user2Token).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
@@ -127,7 +116,7 @@ func TestVoteAuthorizedTwoPerDay(t *testing.T) {
 		restaurantLokysID, menuLokys2ID).
 		WithQuery("date", "2020-03-01").
 		WithHeader("Authorization", "Bearer "+user1Token).
-		Expect().Status(http.StatusMethodNotAllowed).
+		Expect().Status(http.StatusForbidden).
 		JSON().Object().
 		Path("$.error.message").Equal("no token found")
 
@@ -145,7 +134,7 @@ func TestVoteAuthorizedTwoPerDay(t *testing.T) {
 		restaurantLokysID, menuLokys2ID).
 		WithQuery("date", "2020-03-02").
 		WithHeader("Authorization", "Bearer "+user2Token).
-		Expect().Status(http.StatusMethodNotAllowed).
+		Expect().Status(http.StatusForbidden).
 		JSON().Object().
 		Path("$.error.message").Equal("no token found")
 }
@@ -167,7 +156,7 @@ func TestGetTodayVotes(t *testing.T) {
 	server := getTestServer(t)
 	e := httpexpect.New(t, server.URL)
 
-	// /api/v1/restaurant/{restaurantId}/menu/{menuId}/vote
+	// /api/v1/restaurant/votes
 	rObj := e.GET("/votes").
 		Expect().Status(http.StatusOK).
 		JSON().Array()

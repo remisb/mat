@@ -295,7 +295,7 @@ func TestRestaurantMenuRetrieval(t *testing.T) {
 
 	e.GET("/{restaurantId}/menu", restaurantPaikisID).
 		Expect().Status(http.StatusOK).
-		JSON().Array().Length().Equal(0)
+		JSON().Array().Length().Equal(2)
 }
 
 func NewDate(year int, month time.Month, day int) time.Time {
