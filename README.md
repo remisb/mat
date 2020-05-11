@@ -2,6 +2,12 @@
 
 Restaurant menu voting and management REST api service implemented on golang.
 
+Application is done to be fully configurable and to mach ["The Twelve-Factor App"] requirements. 
+All application work related properties are externalized and app work can be configured with
+configuration file, CLI flags or environment apps.
+
+TBD 
+
 ## Requirement
 
 * Docker container
@@ -62,6 +68,10 @@ To fill database with default testing data.
 ## ToDo
 
 [x] - Finish logging to external file
+[ ] - write documentation
+[ ] - update / improve app flag documentation
+[ ] - add swagger documentation
+[ ] - extend / update makefile to improve development experience
 
 ## Requirements
 
