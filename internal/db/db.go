@@ -10,13 +10,13 @@ import (
 
 var (
 	// ErrNotFound used when user is not found
-	ErrNotFound              = errors.New("User not found")
+	ErrNotFound = errors.New("User not found")
 	// ErrInvalidID used when passed ID has invalid format
-	ErrInvalidID             = errors.New("ID is not in its proper form")
+	ErrInvalidID = errors.New("ID is not in its proper form")
 	// ErrAuthenticationFailure used when authentication has failed
 	ErrAuthenticationFailure = errors.New("AuthenticationFailed")
 	// ErrForbidden used when forbitten action was tryed to perform.
-	ErrForbidden             = errors.New("Attempted action is not allowed")
+	ErrForbidden = errors.New("Attempted action is not allowed")
 )
 
 type Config struct {

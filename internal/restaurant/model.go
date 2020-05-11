@@ -1,6 +1,13 @@
 package restaurant
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+var (
+	ErrUnauthorized = errors.New("user is unauthorized to perform action")
+)
 
 // Restaurant entity stored in DB
 type Restaurant struct {
@@ -45,10 +52,10 @@ type NewMenu struct {
 }
 
 type UpdateMenu struct {
-	ID   string    `db:"menu_id" json:"id"`
-	RestaurantID string `db:"restaurant_id" json:"restaurantId"`
-	Menu string    `db:"menu" json:"menu"`
-	Date time.Time `db:"date" json:"date"`
+	ID           string    `db:"menu_id" json:"id"`
+	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
+	Menu         string    `db:"menu" json:"menu"`
+	Date         time.Time `db:"date" json:"date"`
 }
 
 type Vote struct {

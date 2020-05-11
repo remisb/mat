@@ -22,16 +22,18 @@ var initConfigOnce sync.Once
 type SrvConfig struct {
 	Host            string
 	Port            int
+	Log             string
 	DebugHost       string
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
 	ShutdownTimeout time.Duration
 }
 
-func NewSrvConfig(host string, port int) SrvConfig {
+func NewSrvConfig(host string, port int, log string) SrvConfig {
 	return SrvConfig{
 		Host:            host,
 		Port:            port,
+		Log:             log,
 		ReadTimeout:     time.Second * 5,
 		WriteTimeout:    time.Second * 5,
 		ShutdownTimeout: time.Second * 5,
@@ -69,7 +71,9 @@ func NewConfig() *Config {
 func srvConfig() SrvConfig {
 	return NewSrvConfig(
 		viper.GetString("host"),
-		viper.GetInt("port"))
+		viper.GetInt("port"),
+		viper.GetString("log"),
+	)
 }
 
 func authConfig() AuthConfig {
@@ -96,6 +100,7 @@ func initCliFlags() {
 		// setup cli flags
 		pflag.CommandLine.StringP("host", "h", "localhost", "api service host")
 		pflag.CommandLine.IntP("port", "p", 8080, "api service port")
+		pflag.CommandLine.StringP("log", "l", "restaurant-api.log", "api service log file")
 
 		// auth config flags
 		pflag.String("auth-keyid", "1", "Authenticator Key ID")
@@ -122,6 +127,7 @@ func initCliFlags() {
 
 		// bind server conf
 		bindEnv("port")
+		bindEnv("log")
 
 		// bind auth conf
 		bindEnv("auth-keyid")

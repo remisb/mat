@@ -2,6 +2,8 @@ package restaurantapi
 
 import (
 	"github.com/gavv/httpexpect/v2"
+	"github.com/go-chi/chi"
+	"github.com/remisb/mat/cmd/rest-api/internal/userapi"
 	"github.com/remisb/mat/internal/restaurant"
 	"github.com/remisb/mat/internal/tests"
 	"net/http"
@@ -19,43 +21,76 @@ const (
 )
 
 var (
+	httpHandler      http.Handler
+	e                *httpexpect.Expect
 	restaurantServer *httptest.Server
-	userToken        string
-	user1Token       string
-	user2Token       string
-	adminToken       string
 )
 
+func TestMain(m *testing.M) {
+	testSetup()
+	m.Run()
+	testShutdown()
+}
+
+func testSetup() {
+
+}
+
+func testShutdown() {
+
+}
+
+var restaurantTest *tests.Test
+
+func TestSuite(t *testing.T) {
+	restaurantTest = tests.NewTest(t)
+	t.Cleanup(restaurantTest.Cleanup)
+
+	r := chi.NewRouter()
+
+	userServer := userapi.NewServer("testing", nil, restaurantTest.Dbx)
+	restaurantServer := NewServer("development", nil, restaurantTest.Dbx)
+	r.Route("/api/v1/", func(r chi.Router) {
+		r.Mount("/users", userServer.Router)
+		r.Mount("/restaurant", restaurantServer.Router)
+	})
+
+	restaurantTest.SetupTestUsers(t)
+
+	testServer := httptest.NewServer(r)
+	e = httpexpect.New(t, testServer.URL)
+
+	t.Run("restaurants get", TestGetRestaurants)
+	t.Run("restaurant get", TestGetRestaurant)
+	t.Run("restaurant create", TestCreateRestaurant)
+	t.Run("menus get", TestGetRestaurantMenus)
+	t.Run("menu get", TestRestaurantMenuRetrieval)
+	t.Run("menu create", TestCreateMenu)
+	t.Run("menu update", TestUpdateMenu)
+
+	t.Run("vote by anonymous user", TestVoteAnonymous)
+	t.Run("vote get today votes by anonymous", TestGetTodayVotes)
+	t.Run("vote by user 1", TestVoteTodayUser1)
+	t.Run("vote second per day is forbidden", TestVoteAuthorizedSecondPerDayForbidden)
+	t.Run("vote by user", TestVoteAuthorizedTwoPerDay)
+
+}
+
 func TestGetRestaurants(t *testing.T) {
-	server := getTestServer(t)
-	//defer server.Close()
-
-	e := httpexpect.New(t, server.URL)
-
-	// /api/v1/restaurant
-	count := e.GET("/").Expect().
-		Status(http.StatusOK).JSON().Array().
-		NotEmpty().
-		Length()
-
-	count.Equal(5)
+	e.GET("/api/v1/restaurant").Expect().
+		Status(http.StatusOK).
+		JSON().Array().Length().Equal(5)
 }
 
 func TestGetRestaurant(t *testing.T) {
-	server := getTestServer(t)
-	//defer server.Close()
-
-	e := httpexpect.New(t, server.URL)
-
-	// /api/v1/restaurant
-	e.GET("/{restaurantId}", restaurantInvalidID).
+	e.GET("/api/v1/restaurant/{restaurantId}", restaurantInvalidID).
 		Expect().Status(http.StatusBadRequest).
 		JSON().Object().
-		Value("error").Object().
-		ValueEqual("message", "ID is not in its proper form")
+		Path("$.error.message").Equal("ID is not in its proper form")
 
-	restaurant1 := e.GET("/{restaurantID}", restaurantPaikisID).
-		Expect().Status(http.StatusOK).JSON().Object()
+	restaurant1 := e.GET("/api/v1/restaurant/{restaurantID}", restaurantPaikisID).
+		Expect().Status(http.StatusOK).
+		JSON().Object()
 
 	date1 := NewDate(2019, 3, 24)
 
@@ -66,8 +101,9 @@ func TestGetRestaurant(t *testing.T) {
 	restaurant1.ValueEqual("dateCreated", date1)
 	restaurant1.ValueEqual("dateUpdated", date1)
 
-	restaurant2 := e.GET("/{restaurantID}", restaurantLokysID).
-		Expect().Status(http.StatusOK).JSON().Object()
+	restaurant2 := e.GET("/api/v1/restaurant/{restaurantID}", restaurantLokysID).
+		Expect().Status(http.StatusOK).
+		JSON().Object()
 
 	restaurant2.ValueEqual("id", restaurantLokysID)
 	restaurant2.ValueEqual("name", "Lokys")
@@ -76,39 +112,33 @@ func TestGetRestaurant(t *testing.T) {
 	restaurant2.ValueEqual("dateCreated", date1)
 	restaurant2.ValueEqual("dateUpdated", date1)
 
-	restaurantErr := e.GET("/{restaurantID}", restaurantNoFountID).
-		Expect().Status(http.StatusNotFound).JSON().Object()
-
-	restaurantErr.Value("error").Object().
-		ValueEqual("message", "Restaurant not found")
+	e.GET("/api/v1/restaurant/{restaurantID}", restaurantNoFountID).
+		Expect().Status(http.StatusNotFound).
+		JSON().Object().Path("$.error.message").Equal("Restaurant not found")
 }
 
 func TestGetRestaurantMenus(t *testing.T) {
-	server := getTestServer(t)
-	//defer server.Close()
-
-	e := httpexpect.New(t, server.URL)
 
 	// /api/v1/restaurant/:restaurantId/menu
 	// /api/v1/restaurant/5828612a-1f8a-403c-b6d1-6cb66fbf0c66/menu
-	e.GET("/{restaurantId}/menu", restaurantLokysID).
+	e.GET("/api/v1/restaurant/{restaurantId}/menu", restaurantLokysID).
 		Expect().
 		Status(http.StatusOK).JSON().Array().
 		Length().Equal(2)
 
-	e.GET("/{restaurantId}/menu", restaurantPaikisID).
+	e.GET("/api/v1/restaurant/{restaurantId}/menu", restaurantPaikisID).
 		Expect().
 		Status(http.StatusOK).JSON().Array().
 		Length().Equal(0)
 
-	errObject := e.GET("/{restaurantId}/menu", restaurantInvalidID).
+	errObject := e.GET("/api/v1/restaurant/{restaurantId}/menu", restaurantInvalidID).
 		Expect().
 		Status(http.StatusBadRequest).JSON().Object()
 
 	errObject.Value("error").Object().
 		ValueEqual("message", "ID is not in its proper form")
 
-	errObject = e.GET("/{restaurantId}/menu", restaurantNoFountID).
+	errObject = e.GET("/api/v1/restaurant/{restaurantId}/menu", restaurantNoFountID).
 		Expect().
 		Status(http.StatusNotFound).JSON().Object()
 
@@ -125,22 +155,13 @@ func getTestServer(t *testing.T) *httptest.Server {
 
 		shutdown := make(chan os.Signal, 1)
 
-		api := NewServer("test", shutdown, test.DB)
+		api := NewServer("test", shutdown, test.Dbx)
 		restaurantServer = httptest.NewServer(api.Router)
-
-		adminToken = test.Token("admin@example.com", "gophers")
-		userToken = test.Token("user@example.com", "gophers")
-		user1Token = test.Token("user1@example.com", "gophers")
-		user2Token = test.Token("user2@example.com", "gophers")
 	}
 	return restaurantServer
 }
 
 func TestCreateRestaurant(t *testing.T) {
-	server := getTestServer(t)
-	//defer server.Close()
-
-	e := httpexpect.New(t, server.URL)
 
 	// /api/v1/restaurant
 	newRestaurant := restaurant.NewRestaurant{
@@ -154,16 +175,15 @@ func TestCreateRestaurant(t *testing.T) {
 	}
 
 	// without claims should fail
-	errObject := e.POST("/").WithJSON(newRestaurant).
+	e.POST("/api/v1/restaurant").WithJSON(newRestaurant).
 		Expect().
-		Status(http.StatusUnauthorized).JSON().Object()
-
-	errObject.Value("error").Object().
-		ValueEqual("message", "no token found")
+		Status(http.StatusUnauthorized).
+		JSON().Object().
+		Path("$.error.message").Equal("no token found")
 
 	// get claims for test user 1s
-	restaurantObj := e.POST("/").
-		WithHeader("Authorization", "Bearer "+userToken).
+	restaurantObj := e.POST("/api/v1/restaurant").
+		WithHeader("Authorization", "Bearer "+restaurantTest.User.Token).
 		WithJSON(newRestaurant).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
@@ -171,8 +191,8 @@ func TestCreateRestaurant(t *testing.T) {
 	assertRestaurantError(restaurantObj, newRestaurant)
 
 	// create restaurant with admin token
-	restaurantObj = e.POST("/").
-		WithHeader("Authorization", "Bearer "+adminToken).
+	restaurantObj = e.POST("/api/v1/restaurant").
+		WithHeader("Authorization", "Bearer "+restaurantTest.Admin.Token).
 		WithJSON(newRestaurant).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
@@ -180,8 +200,8 @@ func TestCreateRestaurant(t *testing.T) {
 	assertRestaurantError(restaurantObj, newRestaurant)
 
 	// create restaurant with user token
-	restaurantObj = e.POST("/").
-		WithHeader("Authorization", "Bearer "+userToken).
+	restaurantObj = e.POST("/api/v1/restaurant").
+		WithHeader("Authorization", "Bearer "+restaurantTest.User.Token).
 		WithJSON(newRestaurant2).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
@@ -196,17 +216,7 @@ func TestCreateRestaurant(t *testing.T) {
 	// test Address
 }
 
-func assertRestaurantError(actual *httpexpect.Object, expected restaurant.NewRestaurant) {
-	actual.ValueEqual("name", expected.Name)
-	actual.ValueEqual("address", expected.Address)
-	actual.Value("ownerUserId").NotNull()
-	actual.Value("dateCreated").NotNull()
-	actual.Value("dateUpdated").NotNull()
-}
-
 func TestCreateMenu(t *testing.T) {
-	server := getTestServer(t)
-	e := httpexpect.New(t, server.URL)
 
 	newMenu := restaurant.NewMenu{
 		RestaurantID: restaurantPaikisID,
@@ -214,11 +224,9 @@ func TestCreateMenu(t *testing.T) {
 		Date:         NewDate(2020, 3, 24),
 	}
 
-	// anonymous failed
-
 	// admin success
-	menuObj := e.POST("/{restaurantId}/menu", restaurantLokysID).
-		WithHeader("Authorization", "Bearer "+adminToken).
+	menuObj := e.POST("/api/v1/restaurant/{restaurantId}/menu", restaurantLokysID).
+		WithHeader("Authorization", "Bearer "+restaurantTest.Admin.Token).
 		WithJSON(newMenu).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
@@ -232,8 +240,8 @@ func TestCreateMenu(t *testing.T) {
 	}
 
 	// user success
-	menuObj = e.POST("/{restaurantId}/menu", restaurantLokysID).
-		WithHeader("Authorization", "Bearer "+userToken).
+	menuObj = e.POST("/api/v1/restaurant/{restaurantId}/menu", restaurantLokysID).
+		WithHeader("Authorization", "Bearer "+restaurantTest.User.Token).
 		WithJSON(newMenu2).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
@@ -249,8 +257,6 @@ func assertMenuEqual(actual *httpexpect.Object, expected restaurant.NewMenu) {
 }
 
 func TestUpdateMenu(t *testing.T) {
-	server := getTestServer(t)
-	e := httpexpect.New(t, server.URL)
 
 	newMenuUpdate := restaurant.NewMenu{
 		RestaurantID: restaurantLokysID,
@@ -258,11 +264,9 @@ func TestUpdateMenu(t *testing.T) {
 		Date:         NewDate(2020, 3, 2),
 	}
 
-	// anonymous failed
-
 	// admin success
-	menuObj := e.POST("/{restaurantId}/menu", restaurantLokysID).
-		WithHeader("Authorization", "Bearer "+adminToken).
+	menuObj := e.POST("/api/v1/restaurant/{restaurantId}/menu", restaurantLokysID).
+		WithHeader("Authorization", "Bearer "+restaurantTest.Admin.Token).
 		WithJSON(newMenuUpdate).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
@@ -278,26 +282,33 @@ func TestUpdateMenu(t *testing.T) {
 }
 
 func TestRestaurantMenuRetrieval(t *testing.T) {
-	server := getTestServer(t)
-	//defer server.Close()
 
-	e := httpexpect.New(t, server.URL)
-
-	e.GET("//menu").
+	e.GET("/api/v1/restaurant//menu").
 		Expect().Status(http.StatusBadRequest).
 		JSON().Object().
-		Value("error").Object().
-		ValueEqual("message", "restaurantID is undefined")
+		Path("$.error.message").Equal("restaurantID is undefined")
 
-	e.GET("/{restaurantId}/menu", restaurantInvalidID).
+	e.GET("/api/v1/restaurant/{restaurantId}/menu", restaurantInvalidID).
 		Expect().
 		Status(http.StatusBadRequest).
-		JSON().Object().Value("error").Object().
-		ValueEqual("message", "ID is not in its proper form")
+		JSON().Object().
+		Path("$.error.message").Equal("ID is not in its proper form")
 
-	e.GET("/{restaurantId}/menu", restaurantPaikisID).
+	e.GET("/api/v1/restaurant/{restaurantId}/menu", restaurantLokysID).
 		Expect().Status(http.StatusOK).
 		JSON().Array().Length().Equal(2)
+
+	e.GET("/api/v1/restaurant/{restaurantId}/menu", restaurantPaikisID).
+		Expect().Status(http.StatusOK).
+		JSON().Array().Length().Equal(2)
+}
+
+func assertRestaurantError(actual *httpexpect.Object, expected restaurant.NewRestaurant) {
+	actual.ValueEqual("name", expected.Name)
+	actual.ValueEqual("address", expected.Address)
+	actual.Value("ownerUserId").NotNull()
+	actual.Value("dateCreated").NotNull()
+	actual.Value("dateUpdated").NotNull()
 }
 
 func NewDate(year int, month time.Month, day int) time.Time {

@@ -1,5 +1,6 @@
 host: 0.0.0.0
 port: 8090
+log: ./restaurant-api.log
 Auth:
   Keyfile: private.pem
   Algrithm:

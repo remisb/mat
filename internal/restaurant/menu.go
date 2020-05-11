@@ -17,14 +17,14 @@ import (
 var ErrNotFound = errors.New("menu not found")
 
 // RetrieveMenu used to retrieve menu from DB by specified menuID
-func RetrieveMenu(ctx context.Context, dbx *sqlx.DB, menuID string) (*Menu, error) {
+func (r *Repo) RetrieveMenu(ctx context.Context, menuID string) (*Menu, error) {
 	if _, err := uuid.Parse(menuID); err != nil {
 		return nil, db.ErrInvalidID
 	}
 
 	var m Menu
 	const q = `SELECT * FROM menu WHERE menu_id = $1`
-	if err := dbx.GetContext(ctx, &m, q, menuID); err != nil {
+	if err := r.db.GetContext(ctx, &m, q, menuID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, db.ErrNotFound
 		}
@@ -35,11 +35,11 @@ func RetrieveMenu(ctx context.Context, dbx *sqlx.DB, menuID string) (*Menu, erro
 	return &m, nil
 }
 
-func readMenuByRestaurantDate(ctx context.Context, dbx *sqlx.DB, restaurantID string, date time.Time) (*Menu, error) {
+func (r *Repo) readMenuByRestaurantDate(ctx context.Context, restaurantID string, date time.Time) (*Menu, error) {
 	var m Menu
 	const q = `SELECT * FROM menu 
 	    WHERE restaurant_id = $1 AND date = $2`
-	if err := dbx.GetContext(ctx, &m, q, restaurantID, date); err != nil {
+	if err := r.db.GetContext(ctx, &m, q, restaurantID, date); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
@@ -52,7 +52,7 @@ func readMenuByRestaurantDate(ctx context.Context, dbx *sqlx.DB, restaurantID st
 }
 
 // RetrieveRestaurantMenus retrieves specified menu from database
-func RetrieveRestaurantMenus(ctx context.Context, dbx *sqlx.DB, restaurantID, menuID string, ) (*Menu, error) {
+func (r *Repo) RetrieveRestaurantMenus(ctx context.Context, restaurantID, menuID string) (*Menu, error) {
 	if _, err := uuid.Parse(restaurantID); err != nil {
 		return nil, db.ErrInvalidID
 	}
@@ -63,7 +63,7 @@ func RetrieveRestaurantMenus(ctx context.Context, dbx *sqlx.DB, restaurantID, me
 
 	var menu Menu
 	const q = `SELECT * FROM menu WHERE restaurant_id = $1 AND menu_id = $2`
-	if err := dbx.GetContext(ctx, &menu, q, restaurantID, menuID); err != nil {
+	if err := r.db.GetContext(ctx, &menu, q, restaurantID, menuID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, db.ErrNotFound
 		}
@@ -78,46 +78,46 @@ func RetrieveRestaurantMenus(ctx context.Context, dbx *sqlx.DB, restaurantID, me
 // NOTE functionality of this func is identical to MenuVotes.
 // QUESTION 1: Do I have to have those two functions?
 // QUESTION 2: Should I modify MenuVotes functionality to be more specific for votes data retrieval?
-func RetrieveMenusByDate(ctx context.Context, dbx *sqlx.DB, date time.Time) ([]Menu, error) {
+func (r *Repo) RetrieveMenusByDate(ctx context.Context, date time.Time) ([]Menu, error) {
 	var menus = make([]Menu, 0)
 	const q = `SELECT * FROM menu WHERE date = $1`
-	if err := dbx.SelectContext(ctx, &menus, q, date); err != nil {
+	if err := r.db.SelectContext(ctx, &menus, q, date); err != nil {
 		return nil, errors.Wrap(err, "retrieving menus for specified date")
 	}
 	return menus, nil
 }
 
 // RetrieveMenusByRestaurant retrieves list of menus from DB for specified restaurant.
-func RetrieveMenusByRestaurant(ctx context.Context, dbx *sqlx.DB, restaurantID string) ([]Menu, error) {
+func (r *Repo) RetrieveMenusByRestaurant(ctx context.Context, restaurantID string) ([]Menu, error) {
 	if _, err := uuid.Parse(restaurantID); err != nil {
 		return nil, db.ErrInvalidID
 	}
 
-	_, err := RetrieveRestaurant(ctx, dbx, restaurantID)
+	_, err := r.GetRestaurant(ctx, restaurantID)
 	if err != nil {
 		return nil, err
 	}
 
 	var menus = make([]Menu, 0)
 	const q = `SELECT * FROM menu WHERE restaurant_id = $1 ORDER BY date DESC `
-	if err := dbx.SelectContext(ctx, &menus, q, restaurantID); err != nil {
+	if err := r.db.SelectContext(ctx, &menus, q, restaurantID); err != nil {
 		return nil, errors.Wrap(err, "retrieving restaurant menus")
 	}
 	return menus, nil
 }
 
 // MenuVotes retrieves list of menu with votes for specified date from database
-func MenuVotes(ctx context.Context, dbx *sqlx.DB, date time.Time) ([]Menu, error) {
+func (r *Repo) MenuVotes(ctx context.Context, date time.Time) ([]Menu, error) {
 	var menus = make([]Menu, 0)
 	const q = `SELECT * FROM menu WHERE date = $1`
-	if err := dbx.SelectContext(ctx, &menus, q, date); err != nil {
+	if err := r.db.SelectContext(ctx, &menus, q, date); err != nil {
 		return nil, errors.Wrap(err, "retrieving menu votes")
 	}
 	return menus, nil
 }
 
-func MenuVote(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, restaurantID, menuID string, date time.Time) error {
-	tx, err := dbx.BeginTx(ctx, nil)
+func (r *Repo) MenuVote(ctx context.Context, claims jwt.MapClaims, restaurantID, menuID string, date time.Time) error {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -181,9 +181,9 @@ func isRestaurantOwner(restaurant *Restaurant, claims jwt.MapClaims) bool {
 	return restaurant.OwnerUserID == claims["sub"].(string)
 }
 
-func MenuUpdate(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, um UpdateMenu) (*Menu, error) {
+func (r *Repo) MenuUpdate(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, um UpdateMenu) (*Menu, error) {
 
-	restaurant, err := RetrieveRestaurant(ctx, dbx, um.RestaurantID)
+	restaurant, err := r.GetRestaurant(ctx, um.RestaurantID)
 	if err != nil {
 		return nil, errors.Wrap(db.ErrNotFound, "unable to find restaurant with restaurantID: "+um.RestaurantID)
 	}
@@ -193,7 +193,7 @@ func MenuUpdate(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, um Upda
 	}
 
 	// does the menu exist for specified date
-	menu, err := RetrieveMenu(ctx, dbx, um.ID)
+	menu, err := r.RetrieveMenu(ctx, um.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -213,14 +213,14 @@ func MenuUpdate(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, um Upda
 	// only restaurant owner or admin users can perform menu update
 
 	if menu == nil {
-		return CreateRestaurantMenu(ctx, claims, dbx, um)
+		return r.CreateRestaurantMenu(ctx, um)
 	}
 	return menu, nil
 }
 
-func CreateRestaurantMenu(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, um UpdateMenu) (*Menu, error) {
+func (r *Repo) CreateRestaurantMenu(ctx context.Context, um UpdateMenu) (*Menu, error) {
 
-	menu, err := readMenuByRestaurantDate(ctx, dbx, um.RestaurantID, um.Date)
+	menu, err := r.readMenuByRestaurantDate(ctx, um.RestaurantID, um.Date)
 	if err != nil {
 		if err != ErrNotFound {
 			return nil, errors.Wrapf(err,
@@ -233,19 +233,19 @@ func CreateRestaurantMenu(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.D
 		if um.ID == "" {
 			um.ID = menu.ID
 		}
-		return updateRestaurantMenu(ctx, dbx, um)
+		return r.updateRestaurantMenu(ctx, um)
 	}
 
-	return insertRestaurantMenu(ctx, dbx, um)
+	return r.insertRestaurantMenu(ctx, um)
 }
 
-func updateRestaurantMenu(ctx context.Context, dbx *sqlx.DB, um UpdateMenu) (*Menu, error) {
+func (r *Repo) updateRestaurantMenu(ctx context.Context, um UpdateMenu) (*Menu, error) {
 
 	const qUpdate = `UPDATE menu SET
 	    menu =  $1, date = $2
 	    WHERE menu_id = $3`
 
-	result, err := dbx.ExecContext(ctx, qUpdate, um.Menu, um.Date, um.ID)
+	result, err := r.db.ExecContext(ctx, qUpdate, um.Menu, um.Date, um.ID)
 	if err != nil {
 		return nil, errors.Wrap(err, "updating menu")
 	}
@@ -258,17 +258,17 @@ func updateRestaurantMenu(ctx context.Context, dbx *sqlx.DB, um UpdateMenu) (*Me
 		return nil, errors.New("no updates done")
 	}
 
-	return RetrieveMenu(ctx, dbx, um.ID)
+	return r.RetrieveMenu(ctx, um.ID)
 }
 
-func insertRestaurantMenu(ctx context.Context, dbx *sqlx.DB, um UpdateMenu) (*Menu, error) {
+func (r *Repo) insertRestaurantMenu(ctx context.Context, um UpdateMenu) (*Menu, error) {
 	if um.ID == "" {
 		um.ID = uuid.New().String()
 	}
 	const qInsert = `INSERT INTO menu 
 	(menu_id, restaurant_id, date, menu, votes)
 	VALUES ($1, $2, $3, $4, $5)`
-	menuResult, err := dbx.ExecContext(ctx, qInsert, um.ID, um.RestaurantID, um.Date, um.Menu, 0)
+	menuResult, err := r.db.ExecContext(ctx, qInsert, um.ID, um.RestaurantID, um.Date, um.Menu, 0)
 	if err != nil {
 		return nil, errors.Wrap(err, "inserting menu")
 	}

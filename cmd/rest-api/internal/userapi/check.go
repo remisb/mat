@@ -3,6 +3,7 @@ package userapi
 import (
 	"context"
 	"github.com/jmoiron/sqlx"
+	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/db"
 	"net/http"
 )
@@ -30,9 +31,10 @@ func (c *Check) Health(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		// status. Do not respond by just returning an error because further up in
 		// the call stack will interpret that as an unhandled error.
 		health.Status = "db not ready"
-		Respond(w, r, http.StatusInternalServerError, health)
+		web.Respond(w, r, http.StatusInternalServerError, health)
+		return
 	}
 
 	health.Status = "ok"
-	Respond(w, r, http.StatusOK, health)
+	web.Respond(w, r, http.StatusOK, health)
 }

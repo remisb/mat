@@ -9,6 +9,7 @@ require (
 	github.com/go-chi/chi v4.1.1+incompatible
 	github.com/go-chi/cors v1.1.1
 	github.com/go-chi/jwtauth v4.0.4+incompatible
+	github.com/go-kit/kit v0.8.0
 	github.com/google/uuid v1.1.1
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/kr/pretty v0.2.0 // indirect

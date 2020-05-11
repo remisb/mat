@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/jmoiron/sqlx"
@@ -12,13 +13,14 @@ import (
 	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/log"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"net/http"
 	_ "net/http/pprof" // Register the pprof handlers
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
 	//"github.com/remisb/mat/cmd/rest-api/internal/database"
 	//"github.com/remisb/mat/cmd/rest-api/internal/database"
 )
@@ -33,10 +35,56 @@ type contextKey struct {
 
 func main() {
 	config := conf.NewConfig()
+	initLogger(config)
+	//log.SetupLogger(config.Server)
 	if err := startAPIServerAndWait(*config); err != nil {
 		log.Sugar.Errorf("error :", err)
 		os.Exit(1)
 	}
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func initLogger(config *conf.Config) {
+	logCfg := zap.NewDevelopmentConfig()
+	out := logCfg.OutputPaths
+
+	//dir, err := os.Getwd()
+	//if err != nil {
+	//	fmt.Printf("error on getting working wirectory err: %s",err)
+	//	os.Exit(1)
+	//}
+
+	//logFilePath := filepath.Join(dir, config.Server.Log)
+	//if logFilePath != "" {
+	//	f, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	//	if err != nil {
+	//		return
+	//	}
+	//}
+
+	fmt.Printf("Log file path: %s", config.Server.Log)
+	//logFile, err := initLogFile()
+	out = append(out, config.Server.Log)
+
+	var err error
+
+	log.Logger, err = logCfg.Build()
+	if err != nil {
+		err := fmt.Errorf("error in log init err: %v", err)
+		fmt.Print(err)
+	}
+	log.Sugar = log.Logger.Sugar()
+	logCfg.Level.SetLevel(zapcore.DebugLevel)
+
+	log.Sugar.Infof("Loggig is set to console and file")
+	log.Sugar.Sync()
 }
 
 func startDatabase(dbConf db.Config) (*sqlx.DB, error) {
@@ -107,10 +155,10 @@ func startAPIServer(cfg conf.Config, dbx *sqlx.DB,
 	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	apiServer := userapi.NewServer("development", shutdownChan, dbx)
-    restaurantServer := restaurantapi.NewServer("development", shutdownChan, dbx)
+	userServer := userapi.NewServer("development", shutdownChan, dbx)
+	restaurantServer := restaurantapi.NewServer("development", shutdownChan, dbx)
 	r.Route("/api/v1/", func(r chi.Router) {
-		r.Mount("/users", apiServer.Router)
+		r.Mount("/users", userServer.Router)
 		r.Mount("/restaurant", restaurantServer.Router)
 	})
 

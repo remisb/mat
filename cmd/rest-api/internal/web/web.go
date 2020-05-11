@@ -4,21 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/cors"
-	"github.com/go-chi/jwtauth"
 	"net/http"
 )
 
 const (
 	HeaderContentType   = "Content-Type"
 	MimeApplicationJSON = "application/json"
-	MimeTextPlain       = "text/plain"
 )
-
-var TokenAuth *jwtauth.JWTAuth
-
-func init() {
-	TokenAuth = jwtauth.New("HS256", []byte("secret"), nil)
-}
 
 // Error is used to pass an error during the request through the
 // application with web specific context.
@@ -61,7 +53,6 @@ func RespondError(w http.ResponseWriter, r *http.Request, status int, args ...in
 			"message": fmt.Sprint(args...)},
 	})
 }
-
 func Respond(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
 	w.Header().Set(HeaderContentType, MimeApplicationJSON)
 	w.WriteHeader(status)

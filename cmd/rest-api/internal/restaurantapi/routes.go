@@ -5,7 +5,7 @@ import (
 	"github.com/remisb/mat/cmd/rest-api/internal/web"
 )
 
-func (s *Server) routes() {
+func (s *Server) initRoutes() {
 	if s.Router == nil {
 		// /api/v1/restaurant
 		s.Router = chi.NewMux()
@@ -19,7 +19,7 @@ func (s *Server) routes() {
 		s.Router.Get("/{restaurantId}/menu/:menuId", s.handleRestaurantMenuGet)
 
 		s.Router.Group(func(r chi.Router) {
-			r.Use(web.Verifier(s.tokenAuth))
+			r.Use(web.Verifier(s.jwtAuth))
 			r.Use(web.Authenticator)
 
 			r.Post("/{restaurantId}/menu/{menuId}/vote", s.handleRestaurantMenuVotePost)
@@ -30,4 +30,3 @@ func (s *Server) routes() {
 		})
 	}
 }
-

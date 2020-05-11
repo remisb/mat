@@ -1,7 +1,6 @@
 package restaurantapi
 
 import (
-	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/jwtauth"
 	"github.com/pkg/errors"
@@ -25,7 +24,7 @@ func (s *Server) handleRestaurantMenusGet(w http.ResponseWriter, r *http.Request
 		web.RespondError(w, r, http.StatusBadRequest, "restaurantID is undefined")
 		return
 	}
-	restaurants, err := restaurant.RetrieveMenusByRestaurant(r.Context(), s.db, restaurantID)
+	restaurants, err := s.restaurantRepo.RetrieveMenusByRestaurant(r.Context(), restaurantID)
 	if err != nil {
 		switch err {
 		case db.ErrInvalidID:
@@ -61,14 +60,14 @@ func (s *Server) handleRestaurantMenuCreate(w http.ResponseWriter, r *http.Reque
 	}
 
 	ctx := r.Context()
-	restaurantItem, err := restaurant.RetrieveRestaurant(ctx, s.db, restaurantID)
+	restaurantItem, err := s.restaurantRepo.GetRestaurant(ctx, restaurantID)
 	if err != nil {
 		web.RespondError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 
 	if restaurantItem == nil {
-		web.RespondError(w,r,http.StatusNotFound)
+		web.RespondError(w, r, http.StatusNotFound)
 		return
 	}
 
@@ -84,20 +83,25 @@ func (s *Server) handleRestaurantMenuCreate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if claims == nil {
+		web.RespondError(w, r, http.StatusUnauthorized, web.ErrNoTokenFound)
+		return
+	}
 	//restaurant.UpdateMenu
 	status := http.StatusOK
 	if updateMenu.ID == "" {
 		status = http.StatusCreated
 	}
 
-	menu, err := restaurant.CreateRestaurantMenu(ctx, claims, s.db, updateMenu)
+	menu, err := s.restaurantRepo.CreateRestaurantMenu(ctx, updateMenu)
 	if err != nil {
 		if err != restaurant.ErrNotFound {
 			web.RespondError(w, r, http.StatusInternalServerError, err)
+			return
 		}
 	}
 
-	web.Respond(w,r, status, menu)
+	web.Respond(w, r, status, menu)
 }
 
 // endpoint: get /api/v1/restaurant/menus?date=2020-03-01
@@ -105,25 +109,12 @@ func (s *Server) handleMenusGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
 
 	parsedDate := parseURLDateDefaultNow(w, r, "date")
-	todayMenus, err := restaurant.RetrieveMenusByDate(r.Context(), s.db, parsedDate)
+	todayMenus, err := s.restaurantRepo.RetrieveMenusByDate(r.Context(), parsedDate)
 	if err != nil {
 		web.RespondError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 	web.Respond(w, r, http.StatusOK, todayMenus)
-}
-
-// endpoint: GET /api/v1/restaurant/votes?date=2020-03-02
-func (s *Server) handleMenuVotesGet(w http.ResponseWriter, r *http.Request) {
-	// TODO add pagination
-	parsedDate := parseURLDateDefaultNow(w, r, "date")
-	menuVotes, err := restaurant.MenuVotes(r.Context(), s.db, parsedDate)
-	if err != nil {
-		web.RespondError(w, r, http.StatusInternalServerError, err)
-		return
-	}
-
-	web.Respond(w, r, http.StatusOK, menuVotes)
 }
 
 func parseURLDateDefaultNow(w http.ResponseWriter, r *http.Request, name string) time.Time {
@@ -146,50 +137,11 @@ func parseURLDateDefaultNow(w http.ResponseWriter, r *http.Request, name string)
 	return parsedDate
 }
 
-// handleRestaurantMenuVotePost is used to vote.
-//
-// vote is allowed only for registered user
-// one menu vote is allowed per day
-// removal / change or update of vote is not allowed
-// vote is allowed only for today's menu
-//
-// endpoint: POST /api/v1/restaurant/{restaurantId}/menu/{menuId}/vote
-//
-func (s *Server) handleRestaurantMenuVotePost(w http.ResponseWriter, r *http.Request) {
-	restaurantID := chi.URLParam(r, "restaurantId")
-	menuID := chi.URLParam(r, "menuId")
-
-	ctx := r.Context()
-
-	_, claims, err := jwtauth.FromContext(ctx)
-	if err != nil {
-		web.RespondError(w, r, http.StatusUnauthorized, web.ErrNoTokenFound)
-		return
-	}
-
-	parsedDate := parseURLDateDefaultNow(w, r, "date")
-	err = restaurant.MenuVote(ctx, claims, s.db, restaurantID, menuID, parsedDate)
-	if err != nil {
-		if err.Error() == "user has already voted today" {
-			web.RespondError(w, r, http.StatusForbidden, err)
-			return
-		}
-		web.RespondError(w, r, http.StatusInternalServerError, err)
-		return
-	}
-
-	response := map[string]string{
-		"success": "vote accepted",
-	}
-
-	web.Respond(w, r, http.StatusCreated, response)
-}
-
 func (s *Server) handleRestaurantMenuGet(w http.ResponseWriter, r *http.Request) {
 	restaurantID := chi.URLParam(r, "restaurantId")
 	menuID := chi.URLParam(r, "menuId")
 
-	menu, err := restaurant.RetrieveRestaurantMenus(r.Context(), s.db, restaurantID, menuID)
+	menu, err := s.restaurantRepo.RetrieveRestaurantMenus(r.Context(), restaurantID, menuID)
 	if err != nil {
 		web.RespondError(w, r, http.StatusInternalServerError, menu)
 		return
@@ -202,7 +154,7 @@ func (s *Server) handleRestaurantMenuGet(w http.ResponseWriter, r *http.Request)
 // endpoint: GET /api/v1/restaurant
 func (s *Server) handleRestaurantsGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
-	restaurants, err := restaurant.RetrieveRestaurantList(r.Context(), s.db)
+	restaurants, err := s.restaurantRepo.RetrieveRestaurantList(r.Context())
 	if err != nil {
 		web.RespondError(w, r, http.StatusInternalServerError, err)
 		return
@@ -210,6 +162,7 @@ func (s *Server) handleRestaurantsGet(w http.ResponseWriter, r *http.Request) {
 
 	web.Respond(w, r, http.StatusOK, restaurants)
 }
+
 // endpoint: POST /api/v1/restaurant
 func (s *Server) handleRestaurantCreate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -231,10 +184,12 @@ func (s *Server) handleRestaurantCreate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	uDb, err := restaurant.CreateRestaurant(ctx, claims, s.db, nr, time.Now())
+	userID := claims["sub"].(string)
+
+	uDb, err := s.restaurantRepo.CreateRestaurant(ctx, nr, time.Now(), userID)
 	if err != nil {
 		web.RespondError(w, r, http.StatusInternalServerError, err)
-		fmt.Println("User created with id:", uDb.ID)
+		return
 	}
 
 	//w.Header().Set("Location", "/api/v1/users/" + uDb.ID)
@@ -246,7 +201,7 @@ func (s *Server) handleRestaurantGet(w http.ResponseWriter, r *http.Request) {
 
 	restaurantID := chi.URLParam(r, "restaurantId")
 
-	usr, err := restaurant.RetrieveRestaurant(ctx, s.db, restaurantID)
+	usr, err := s.restaurantRepo.GetRestaurant(ctx, restaurantID)
 	if err != nil {
 		switch err {
 		case db.ErrInvalidID:
@@ -314,7 +269,7 @@ func (s *Server) handleRestaurantDelete() http.HandlerFunc {
 			return
 		}
 
-		err := restaurant.DeleteRestaurant(ctx, s.db, restaurantID)
+		err := s.restaurantRepo.DeleteRestaurant(ctx, restaurantID)
 		if err != nil {
 			switch err {
 			case db.ErrInvalidID:
@@ -332,9 +287,10 @@ func (s *Server) handleRestaurantDelete() http.HandlerFunc {
 			default:
 				err := errors.Wrapf(err, "Id: %s", restaurantID)
 				web.RespondError(w, r, http.StatusInternalServerError, err)
+				return
 			}
 		}
 
-		web.Respond(w, r, http.StatusNoContent, nil)
+		web.Respond(w, r, http.StatusOK, nil)
 	}
 }

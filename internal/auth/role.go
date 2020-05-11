@@ -14,8 +14,8 @@ const (
 // Claims represents the authorization claims transmitted via a JWT.
 type Claims struct {
 	Roles []string `json:"roles"`
-	Name string `json:"name"`
-	Email string `json:"email"`
+	Name  string   `json:"name"`
+	Email string   `json:"email"`
 	jwt.StandardClaims
 }
 
@@ -25,7 +25,7 @@ type Claims struct {
 func NewClaims(subject, name, email string, roles []string, now time.Time, expires time.Duration) Claims {
 	c := Claims{
 		Roles: roles,
-		Name: name,
+		Name:  name,
 		Email: email,
 		StandardClaims: jwt.StandardClaims{
 			Subject:   subject,

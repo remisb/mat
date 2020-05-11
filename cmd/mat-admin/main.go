@@ -109,7 +109,8 @@ func userAdd(cfg db.Config, email, password string) error {
 
 	ctx := context.Background()
 
-	u, err := user.Create(ctx, dbc, "", email, password, []string{auth.RoleUser, auth.RoleAdmin}, time.Now())
+	userRepo := user.NewRepo(dbc)
+	u, err := userRepo.Create(ctx, "", email, password, []string{auth.RoleUser, auth.RoleAdmin}, time.Now())
 	if err != nil {
 		return err
 	}

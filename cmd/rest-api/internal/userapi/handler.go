@@ -1,26 +1,36 @@
 package userapi
 
 import (
-	"fmt"
+	"context"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/jwtauth"
 	"github.com/pkg/errors"
 	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/auth"
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/user"
 	"net/http"
+	"strings"
 	"time"
 )
 
-func (s *Server) handlePolls(w http.ResponseWriter, r *http.Request) {
-}
-
-// Delete removes the specified user from the system.
-func (s *Server) handleUserDelete() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func (s *Server) UserCtx(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID := chi.URLParam(r, "userID")
 		ctx := r.Context()
-		userID := chi.URLParam(r, "id")
-		err := user.Delete(ctx, s.db, userID)
+		_, claims, err := jwtauth.FromContext(ctx)
+		if err != nil || claims == nil {
+			web.RespondError(w, r, http.StatusUnauthorized, web.ErrNoTokenFound)
+			return
+		}
+
+		rolesSlice, err := rolesFromClaims(claims)
+
+		isAdmin := hasRole(rolesSlice, auth.RoleAdmin)
+		isUser := hasRole(rolesSlice, auth.RoleUser)
+
+		user, err := s.userRepo.Retrieve(ctx, userID, rolesSlice)
 		if err != nil {
 			switch err {
 			case db.ErrInvalidID:
@@ -37,21 +47,62 @@ func (s *Server) handleUserDelete() http.HandlerFunc {
 				return
 			default:
 				err := errors.Wrapf(err, "Id: %s", userID)
-				web.RespondError(w, r, http.StatusInternalServerError, err)
+				web.RespondError(w, r, http.StatusForbidden, err)
+				return
 			}
 		}
 
-		web.Respond(w, r, http.StatusNoContent, nil)
+		if !isAdmin && isUser && user.Email != claims["email"] {
+			err := errors.New("data is available only for owner")
+			web.RespondError(w, r, http.StatusForbidden, err)
+			return
+		}
+
+		ctx = context.WithValue(ctx, "user", user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// Delete removes the specified user from the system.
+func (s *Server) handleUserDelete() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		usr, ok := ctx.Value("user").(*user.User)
+		if !ok {
+			err := web.NewRequestError(web.ErrNoTokenFound, http.StatusBadRequest)
+			web.RespondError(w, r, http.StatusNotFound, err)
+			return
+		}
+
+		//userID := chi.URLParam(r, "id")
+		err := s.userRepo.Delete(ctx, usr.ID)
+		if err != nil {
+			switch err {
+			case db.ErrInvalidID:
+				err := web.NewRequestError(err, http.StatusBadRequest)
+				web.RespondError(w, r, http.StatusBadRequest, err)
+				return
+			case db.ErrNotFound:
+				err := web.NewRequestError(err, http.StatusNotFound)
+				web.RespondError(w, r, http.StatusNotFound, err)
+				return
+			case db.ErrForbidden:
+				err := web.NewRequestError(err, http.StatusForbidden)
+				web.RespondError(w, r, http.StatusForbidden, err)
+				return
+			default:
+				err := errors.Wrapf(err, "Id: %s", usr.ID)
+				web.RespondError(w, r, http.StatusInternalServerError, err)
+				return
+			}
+		}
+
+		web.Respond(w, r, http.StatusOK, nil)
 	}
 }
 
 func (s *Server) handleUserUpdate() http.HandlerFunc {
-	// UpdateUser defines what information may be provided to modify an existing
-	// User. All fields are optional so clients can send just the fields they want
-	// changed. It uses pointer fields so we can differentiate between a field that
-	// was not provided and a field that was provided as explicitly blank. Normally
-	// we do not want to use pointers to basic types but we make exceptions around
-	// marshalling/unmarshalling.
 	type request struct {
 		Name            *string  `json:"name"`
 		Email           *string  `json:"email"`
@@ -86,52 +137,14 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uDb, err := user.Create(r.Context(), s.db, u.Name, u.Email, u.Password, u.Roles, time.Now())
+	uDb, err := s.userRepo.Create(r.Context(), u.Name, u.Email, u.Password, u.Roles, time.Now())
 	if err != nil {
 		web.RespondError(w, r, http.StatusInternalServerError, err)
-		fmt.Println("User created with id:", uDb.ID)
+		return
 	}
 
 	//w.Header().Set("Location", "/api/v1/users/" + uDb.ID)
 	web.Respond(w, r, http.StatusCreated, uDb)
-}
-
-func (s *Server) handleToken2Get(w http.ResponseWriter, r *http.Request) {
-	email, pass, ok := r.BasicAuth()
-	if !ok {
-		err := errors.New("must provide email and password in Basic auth")
-		web.RespondError(w, r, http.StatusUnauthorized, err)
-		return
-	}
-
-	ctx := r.Context()
-	now := time.Now()
-	claims, err := user.Authenticate(ctx, s.db, now, email, pass)
-	if err != nil {
-		switch err {
-		case db.ErrAuthenticationFailure:
-			web.RespondError(w, r, http.StatusUnauthorized, err)
-			return
-		default:
-			err = errors.Wrap(err, "authenticating")
-			web.RespondError(w, r, http.StatusInternalServerError, err)
-			return
-		}
-	}
-
-	token, tokenString, err := s.tokenAuth.Encode(claims)
-	if err != nil {
-		err = errors.Wrap(err, "token encode")
-		web.RespondError(w, r, http.StatusInternalServerError, err)
-		return
-	}
-	fmt.Printf("DEBUG: a sample jwt is %s\n \tclaim: %v\n", tokenString, token)
-
-	var tkn struct {
-		Token string `json:"token"`
-	}
-	tkn.Token = tokenString
-	web.Respond(w, r, http.StatusOK, tkn)
 }
 
 func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
@@ -143,72 +156,25 @@ func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	now := time.Now()
-	claims, err := user.Authenticate(ctx, s.db, now, email, pass)
-	if err != nil {
-		switch err {
-		case db.ErrAuthenticationFailure:
-			web.RespondError(w, r, http.StatusUnauthorized, err)
-			return
-		default:
-			err = errors.Wrap(err, "authenticating")
-			web.RespondError(w, r, http.StatusInternalServerError, err)
-			return
-		}
-	}
 
-	token, tokenString, err := s.tokenAuth.Encode(claims)
+	aut := *s.authenticator
+	token, _, err := aut.NewToken(ctx, email, pass)
 	if err != nil {
 		err = errors.Wrap(err, "token encode")
 		web.RespondError(w, r, http.StatusInternalServerError, err)
 		return
 	}
-	fmt.Printf("DEBUG: a sample jwt is %s\n \tclaim: %v\n", tokenString, token)
 
 	var tkn struct {
 		Token string `json:"token"`
 	}
-	tkn.Token = tokenString
-	web.Respond(w, r, http.StatusOK, tkn)
-}
-
-func (s *Server) handleTokenGetOriginal(w http.ResponseWriter, r *http.Request) {
-	email, pass, ok := r.BasicAuth()
-	if !ok {
-		err := errors.New("must provide email and password in Basic auth")
-		web.RespondError(w, r, http.StatusUnauthorized, err)
-		return
-	}
-
-	ctx := r.Context()
-	now := time.Now()
-	claims, err := user.Authenticate(ctx, s.db, now, email, pass)
-	if err != nil {
-		switch err {
-		case db.ErrAuthenticationFailure:
-			web.RespondError(w, r, http.StatusUnauthorized, err)
-			return
-		default:
-			err = errors.Wrap(err, "authenticating")
-			web.RespondError(w, r, http.StatusInternalServerError, err)
-		}
-	}
-
-	var tkn struct {
-		Token string `json:"token"`
-	}
-	_, tkn.Token, err = s.tokenAuth.Encode(claims)
-	if err != nil {
-		err = errors.Wrap(err, "generating token")
-		web.RespondError(w, r, http.StatusInternalServerError, err)
-		return
-	}
+	tkn.Token = token
 	web.Respond(w, r, http.StatusOK, tkn)
 }
 
 func (s *Server) handleUsersPagedGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
-	users, err := user.List(r.Context(), s.db)
+	users, err := s.userRepo.GetUsers(r.Context())
 	if err != nil {
 		web.RespondError(w, r, http.StatusInternalServerError, err)
 		return
@@ -219,7 +185,24 @@ func (s *Server) handleUsersPagedGet(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
-	users, err := user.List(r.Context(), s.db)
+
+	_, claims, err := jwtauth.FromContext(r.Context())
+	if err != nil || claims == nil {
+		web.RespondError(w, r, http.StatusUnauthorized, web.ErrNoTokenFound)
+		return
+	}
+
+	rolesSlice, err := rolesFromClaims(claims)
+
+	isAdmin := hasRole(rolesSlice, auth.RoleAdmin)
+
+	if !isAdmin {
+		err := errors.New("data is available only for admin")
+		web.RespondError(w, r, http.StatusForbidden, err)
+		return
+	}
+
+	users, err := s.userRepo.GetUsers(r.Context())
 	if err != nil {
 		web.RespondError(w, r, http.StatusInternalServerError, err)
 		return
@@ -229,34 +212,12 @@ func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUserGet(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	userID := chi.URLParam(r, "id")
-	claims, ok := ctx.Value(auth.Key).(auth.Claims)
+	usr, ok := r.Context().Value("user").(*user.User)
 	if !ok {
-		web.RespondError(w, r, http.StatusUnauthorized, web.ErrNoTokenFound)
+		// in general this condition is not required, it should not happen
+		err := errors.New("User not found")
+		web.RespondError(w, r, http.StatusNotFound, err)
 		return
-	}
-
-	usr, err := user.Retrieve(ctx, claims, s.db, userID)
-	if err != nil {
-		switch err {
-		case db.ErrInvalidID:
-			err := web.NewRequestError(err, http.StatusBadRequest)
-			web.RespondError(w, r, http.StatusBadRequest, err)
-			return
-		case db.ErrNotFound:
-			err := web.NewRequestError(err, http.StatusNotFound)
-			web.RespondError(w, r, http.StatusNotFound, err)
-			return
-		case db.ErrForbidden:
-			err := web.NewRequestError(err, http.StatusForbidden)
-			web.RespondError(w, r, http.StatusForbidden, err)
-			return
-		default:
-			err := errors.Wrapf(err, "Id: %s", userID)
-			web.RespondError(w, r, http.StatusForbidden, err)
-			return
-		}
 	}
 	web.Respond(w, r, http.StatusOK, usr)
 }
@@ -283,4 +244,30 @@ func (s *Server) handleHealthGet(w http.ResponseWriter, r *http.Request) {
 
 	health.Status = "ok"
 	web.Respond(w, r, http.StatusOK, health)
+}
+
+func rolesStrToStrSlice(roles string) []string {
+	return strings.Split(roles, ",")
+}
+
+func rolesFromClaims(claims jwt.MapClaims) ([]string, error) {
+	roles2, ok := claims["roles"].([]interface{})
+	if !ok {
+		return nil, errors.New("invalid token, no roles")
+	}
+
+	rolesSlice := make([]string, len(roles2))
+	for i, v := range roles2 {
+		rolesSlice[i] = v.(string)
+	}
+	return rolesSlice, nil
+}
+
+func hasRole(roles []string, want string) bool {
+	for _, role := range roles {
+		if role == want {
+			return true
+		}
+	}
+	return false
 }

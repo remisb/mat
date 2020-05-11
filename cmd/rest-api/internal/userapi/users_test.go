@@ -2,6 +2,7 @@ package userapi
 
 import (
 	"github.com/gavv/httpexpect/v2"
+	"github.com/go-chi/chi"
 	"github.com/remisb/mat/internal/auth"
 	"github.com/remisb/mat/internal/tests"
 	"github.com/remisb/mat/internal/user"
@@ -13,31 +14,126 @@ import (
 
 var (
 	userServer *httptest.Server
+	e          *httpexpect.Expect
 )
 
-func TestToken(t *testing.T) {
-	server := getTestServer(t)
-	defer server.Close()
+var userTest *tests.Test
 
-	e := httpexpect.New(t, server.URL)
+func TestSuite(t *testing.T) {
+	userTest = tests.NewTest(t)
+	t.Cleanup(userTest.Cleanup)
 
-	tokenObject := e.GET("/api/v1/user/token2").
-		WithBasicAuth("user@example.com","gophers").
+	r := chi.NewRouter()
+
+	userServer := NewServer("testing", nil, userTest.Dbx)
+	r.Route("/api/v1/", func(r chi.Router) {
+		r.Mount("/users", userServer.Router)
+	})
+
+	userTest.SetupTestUsers(t)
+
+	testServer := httptest.NewServer(r)
+	e = httpexpect.New(t, testServer.URL)
+
+	t.Run("get token", TestToken)
+	t.Run("users get by admin", TestUsersGetByAdmin)
+	t.Run("users get by user", TestUsersGetByUser)
+	t.Run("users get", TestUsersGetByAdmin)
+	t.Run("users", TestUsers)
+}
+
+func TestUsersGetByUser(t *testing.T) {
+	errObj := e.GET("/api/v1/users").
+		WithHeader("Authorization", "Bearer "+userTest.User.Token).
+		Expect().
+		Status(http.StatusForbidden).
+		JSON().Object()
+
+	errObj.Path("$.error.message").Equal("data is available only for admin")
+}
+
+func TestUsersGetByAdmin(t *testing.T) {
+
+	unauthorizedErr := e.GET("/api/v1/users/").
+		Expect().
+		Status(http.StatusUnauthorized).
+		JSON().Object()
+
+	unauthorizedErr.Path("$.error.message").Equal("no token found")
+
+	authAdmin := e.Builder(func(req *httpexpect.Request) {
+		req.WithHeader("Authorization", "Bearer "+userTest.Admin.Token)
+	})
+
+	userSlice := e.GET("/api/v1/users/").
+		WithHeader("Authorization", "Bearer "+userTest.Admin.Token).
+		Expect().
+		Status(http.StatusOK).
+		JSON().Array()
+
+	userSlice.Length().Equal(4)
+
+	// db should return 4 users
+	authAdmin.GET("/api/v1/users").
+		Expect().
+		Status(http.StatusOK).
+		JSON().Array().Length().Equal(4)
+
+	userAdmin := authAdmin.GET("/api/v1/users/{userId}", userTest.Admin.UserID).
+		Expect().
+		Status(http.StatusOK).
+		JSON().Object()
+
+	userAdmin.NotEmpty()
+
+	userUser := authAdmin.GET("/api/v1/users/{userId}", userTest.User.UserID).
+		Expect().
+		Status(http.StatusOK).
+		JSON().Object()
+
+	userUser.NotEmpty()
+}
+
+func TestUsersGet(t *testing.T) {
+	tokenObject := e.GET("/api/v1/users/").
+		WithBasicAuth("user@example.com", "gophers").
 		Expect().
 		Status(http.StatusOK).JSON().Object()
 
 	token := tokenObject.Value("token").String().Raw()
 
-	auth := e.Builder(func (req *httpexpect.Request) {
-		req.WithHeader("Authorization", "Bearer " + token)
+	auth := e.Builder(func(req *httpexpect.Request) {
+		req.WithHeader("Authorization", "Bearer "+token)
 	})
 
 	// get users
-	auth.GET("/").
+	auth.GET("/api/v1/users").
 		Expect().
- 		Status(http.StatusOK)
+		Status(http.StatusOK)
 
-	e.GET("/userId").
+	e.GET("/api/v1/users/{userId}", userTest.Admin.Token).
+		Expect().
+		Status(http.StatusUnauthorized)
+}
+
+func TestToken(t *testing.T) {
+	tokenObject := e.GET("/api/v1/users/token").
+		WithBasicAuth("admin@example.com", "gophers").
+		Expect().
+		Status(http.StatusOK).JSON().Object()
+
+	adminToken := tokenObject.Value("token").String().Raw()
+
+	auth := e.Builder(func(req *httpexpect.Request) {
+		req.WithHeader("Authorization", "Bearer "+adminToken)
+	})
+
+	// get users
+	auth.GET("/api/v1/users").
+		Expect().
+		Status(http.StatusOK)
+
+	e.GET("/api/v1/users/{userId}", userTest.Admin.Token).
 		Expect().
 		Status(http.StatusUnauthorized)
 }
@@ -47,10 +143,9 @@ func getTestServer(t *testing.T) *httptest.Server {
 
 	if userServer == nil {
 		test := tests.NewIntegration(t)
-		defer test.Teardown()
 
 		shutdown := make(chan os.Signal, 1)
-		api := NewServer("test", shutdown, test.DB)
+		api := NewServer("test", shutdown, test.Dbx)
 		userServer = httptest.NewServer(api.Router)
 
 		//adminToken = test.Token("admin@example.com", "gophers")
@@ -60,26 +155,25 @@ func getTestServer(t *testing.T) *httptest.Server {
 }
 
 func TestUsers(t *testing.T) {
-	test := tests.NewIntegration(t)
-	defer test.Teardown()
 
-	shutdown := make(chan os.Signal, 1)
-	userAPI := NewServer("test", shutdown, test.DB)
-	server := httptest.NewServer(userAPI.Router)
-	defer server.Close()
+	errObj := e.GET("/api/v1/users").
+		Expect().
+		Status(http.StatusUnauthorized).
+		JSON().Object()
 
-	e := httpexpect.New(t, server.URL)
+	errObj.Path("$.error.message").Equal("no token found")
 
-	// /api/v1/users
-	count := e.GET("/").
+	authAdmin := e.Builder(func(req *httpexpect.Request) {
+		req.WithHeader("Authorization", "Bearer "+userTest.Admin.Token)
+	})
+
+	count := authAdmin.GET("/api/v1/users").
 		Expect().
 		Status(http.StatusOK).
-		JSON().
-		Array().NotEmpty().Length()
+		JSON().Array().NotEmpty().Length()
 
-	count.Equal(2)
+	count.Equal(4)
 
-	// add new user
 	newUser := user.NewUser{
 		Name:            "Bill Kennedy",
 		Email:           "bill@ardanlabs.com",
@@ -87,34 +181,32 @@ func TestUsers(t *testing.T) {
 		Password:        "gophers",
 		PasswordConfirm: "gophers",
 	}
+
 	// /api/v1/users
-	newUserObj := e.POST("/").
+	newUserObj := authAdmin.POST("/api/v1/users/").
 		WithJSON(newUser).
-		WithHeader("Authorization", "Bearer "+test.AdminToken).
 		Expect().
 		Status(http.StatusCreated).
 		JSON().Object()
 
-	newUserObj.ContainsKey("name").ValueEqual("name", "Bill Kennedy")
-	newUserObj.ContainsKey("email").ValueEqual("email", "bill@ardanlabs.com")
-	newUserObj.ContainsKey("roles").ValueEqual("roles", []string{auth.RoleAdmin})
-	newUserID := newUserObj.Value("id").String()
-
-	t.Logf("obj: %+v\n", newUserID.Raw())
+	newUserObj.ValueEqual("name", "Bill Kennedy")
+	newUserObj.ValueEqual("email", "bill@ardanlabs.com")
+	newUserObj.ValueEqual("roles", []string{auth.RoleAdmin})
+	newUserID := newUserObj.Value("id").String().Raw()
 
 	// /api/v1/users
-	e.GET("/").
+	authAdmin.GET("/api/v1/users/").
 		Expect().
 		Status(http.StatusOK).
-		JSON().
-		Array().Length().Equal(count.Raw() + 1)
+		JSON().Array().Length().Equal(count.Raw() + 1)
 
 	// /api/v1/users/{userID}
-	e.DELETE("/{userID}", newUserID.Raw()).
-		Expect().Status(http.StatusOK)
+	authAdmin.DELETE("/api/v1/users/{userID}", newUserID).
+		Expect().
+		Status(http.StatusOK)
 
 	// /api/v1/users
-	e.GET("/").Expect().
-		JSON().
-		Array().Length().Equal(count.Raw())
+	authAdmin.GET("/api/v1/users").
+		Expect().
+		JSON().Array().Length().Equal(count.Raw())
 }

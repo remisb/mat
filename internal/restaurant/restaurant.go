@@ -3,7 +3,6 @@ package restaurant
 import (
 	"context"
 	"database/sql"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -19,61 +18,72 @@ const (
 
 var ErrRestaurantNotFound = errors.New("Restaurant not found")
 
-// ListPaged is used to return paged list of Restaurants.
-func ListPaged(ctx context.Context, db *sqlx.DB, page int) ([]Restaurant, error) {
+type Repo struct {
+	db *sqlx.DB
+}
+
+func NewRepo(db *sqlx.DB) *Repo {
+	return &Repo{db}
+}
+
+func (r *Repo) GetRestaurantsPaged(ctx context.Context, page int) ([]Restaurant, error) {
 	offset := pageSize * (page - 1)
-	restaurants := []Restaurant{}
-	err := db.SelectContext(ctx, &restaurants, queryPaged, offset, pageSize)
+	restaurants := make([]Restaurant, 0)
+	err := r.db.SelectContext(ctx, &restaurants, queryPaged, offset, pageSize)
 	if err != nil {
 		return nil, errors.Wrap(err, "selecting restaurants")
 	}
 	return restaurants, nil
 }
 
-// RetrieveRestaurantList retrieves list of restaurants from database
-func RetrieveRestaurantList(ctx context.Context, dbx *sqlx.DB) ([]Restaurant, error) {
-
-	restaurants := []Restaurant{}
+func (r *Repo) GetRestaurants(ctx context.Context) ([]Restaurant, error) {
+	restaurants := make([]Restaurant, 0)
 	const q = `SELECT * FROM restaurant`
-	if err := dbx.SelectContext(ctx, &restaurants, q); err != nil {
+	if err := r.db.SelectContext(ctx, &restaurants, q); err != nil {
 		return nil, errors.Wrap(err, "selecting restaurants")
 	}
 	return restaurants, nil
 }
 
 // RetrieveRestaurant gets the specified user from the database.
-func RetrieveRestaurant(ctx context.Context, dbx *sqlx.DB, restaurantID string) (*Restaurant, error) {
+func (r *Repo) GetRestaurant(ctx context.Context, restaurantID string) (*Restaurant, error) {
 	if _, err := uuid.Parse(restaurantID); err != nil {
 		return nil, db.ErrInvalidID
 	}
 
-	// If you are not an admin and looking to retrieve someone else then you are rejected.
-	//if !claims.HasRole(auth.RoleAdmin) && claims.Subject != id {
-	//	return nil, db.ErrForbidden
-	//}
+	var restaurant Restaurant
 
-	var r Restaurant
 	const q = `SELECT * FROM restaurant WHERE restaurant_id = $1`
-	if err := dbx.GetContext(ctx, &r, q, restaurantID); err != nil {
+	if err := r.db.GetContext(ctx, &restaurant, q, restaurantID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrRestaurantNotFound
 		}
-
 		return nil, errors.Wrapf(err, "selecting restaurant %q", restaurantID)
 	}
 
-	return &r, nil
+	return &restaurant, nil
+}
+
+// RetrieveRestaurantList retrieves list of restaurants from database
+func (r *Repo) RetrieveRestaurantList(ctx context.Context) ([]Restaurant, error) {
+
+	restaurants := make([]Restaurant, 0)
+	const q = `SELECT * FROM restaurant`
+	if err := r.db.SelectContext(ctx, &restaurants, q); err != nil {
+		return nil, errors.Wrap(err, "selecting restaurants")
+	}
+	return restaurants, nil
 }
 
 // CreateRestaurant inserts new restaurant into the database.
 //func CreateRestaurant(ctx context.Context, claims auth.Claims, db *sqlx.DB, nr NewRestaurant, now time.Time) (*Restaurant, error) {
-func CreateRestaurant(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, nr NewRestaurant, now time.Time) (*Restaurant, error) {
+func (r *Repo) CreateRestaurant(ctx context.Context, nr NewRestaurant, now time.Time, userID string) (*Restaurant, error) {
 	currentTime := now.UTC()
-	r := Restaurant{
+	rest := Restaurant{
 		ID:          uuid.New().String(),
 		Name:        nr.Name,
 		Address:     nr.Address,
-		OwnerUserID: claims["sub"].(string),
+		OwnerUserID: userID,
 		DateCreated: currentTime,
 		DateUpdated: currentTime,
 	}
@@ -82,22 +92,22 @@ func CreateRestaurant(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, n
 	    (restaurant_id, name, address, owner_user_id, date_created, date_updated)
 	    VALUES ($1, $2, $3, $4, $5, $6)`
 
-	_, err := dbx.ExecContext(ctx, q, r.ID, r.Name, r.Address, r.OwnerUserID, r.DateCreated, r.DateUpdated)
+	_, err := r.db.ExecContext(ctx, q, rest.ID, rest.Name, rest.Address, rest.OwnerUserID, rest.DateCreated, rest.DateUpdated)
 	if err != nil {
 		return nil, errors.Wrap(err, "inserting restaurant")
 	}
 
-	return &r, nil
+	return &rest, nil
 }
 
 // DeleteRestaurant removes a restaurant from the database.
-func DeleteRestaurant(ctx context.Context, dbx *sqlx.DB, restaurantID string) error {
+func (r *Repo) DeleteRestaurant(ctx context.Context, restaurantID string) error {
 	if _, err := uuid.Parse(restaurantID); err != nil {
 		return db.ErrInvalidID
 	}
 
 	const q = `DELETE FROM restaurant WHERE restaurant_id = $1`
-	if _, err := dbx.ExecContext(ctx, q, restaurantID); err != nil {
+	if _, err := r.db.ExecContext(ctx, q, restaurantID); err != nil {
 		return errors.Wrapf(err, "deleting restaurant %s", restaurantID)
 	}
 
