@@ -4,6 +4,10 @@ export PROJECT = mat-api
 
 .DEFAULT_GOAL := help
 
+build: ## build admin executable file
+	go build -o bin/main ./cmd/mat-admin/
+
+
 up: ## Builds, (re)creates, starts, and attaches to Docker containers for a service.
 	docker-compose up
 
