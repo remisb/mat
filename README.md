@@ -78,11 +78,15 @@ To fill database with default testing data.
 
 ## ToDo
 
-[x] - Finish logging to external file
-[ ] - write documentation
-[ ] - update / improve app flag documentation
-[ ] - add swagger documentation
-[ ] - extend / update makefile to improve development experience
+- [x] Finish logging to external file
+- [ ] write documentation
+- [ ] write config file documentation
+- [ ] write CLI flag documentation
+- [ ] write ENV variable documentation 
+- [ ] update / improve app flag documentation
+- [ ] add swagger documentation
+- [ ] extend / update makefile to improve development experience
+- [ ] review / cleanup / update makefile
 
 ## Requirements
 
