@@ -1,5 +1,20 @@
-basePath: /api/v1
+basePath: /
 definitions:
+  restaurant.Restaurant:
+    properties:
+      address:
+        type: string
+      dateCreated:
+        type: string
+      dateUpdated:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      ownerUserId:
+        type: string
+    type: object
   user.User:
     properties:
       date_created:
@@ -15,15 +30,15 @@ definitions:
       roles:
         type: string
     type: object
-  userapi.APIError:
+  web.APIError:
     additionalProperties: true
     type: object
-  userapi.TokenResult:
+  web.TokenResult:
     properties:
       token:
         type: string
     type: object
-host: localhost:8080
+host: localhost:8090
 info:
   contact:
     email: support@restaurant.io
@@ -37,6 +52,55 @@ info:
   title: Restaurant Menu Vote API
   version: "1.0"
 paths:
+  /api/v1/restaurant:
+    get:
+      consumes:
+      - application/json
+      description: get restaurants
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/restaurant.Restaurant'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.APIError'
+      summary: List restaurant
+      tags:
+      - restaurants
+  /api/v1/restaurant/{restaurantId}:
+    get:
+      consumes:
+      - application/json
+      description: get restaurants
+      operationId: get-restaurant-by-int
+      parameters:
+      - description: Restaurant ID
+        in: path
+        name: restaurantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/restaurant.Restaurant'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.APIError'
+      summary: List restaurant
+      tags:
+      - restaurants
   /api/v1/users:
     get:
       consumes:
@@ -54,15 +118,15 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/userapi.APIError'
+            $ref: '#/definitions/web.APIError'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/userapi.APIError'
+            $ref: '#/definitions/web.APIError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/userapi.APIError'
+            $ref: '#/definitions/web.APIError'
       summary: List users
   /api/v1/users/token:
     get:
@@ -75,14 +139,14 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/userapi.TokenResult'
+            $ref: '#/definitions/web.TokenResult'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/userapi.APIError'
+            $ref: '#/definitions/web.APIError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/userapi.APIError'
+            $ref: '#/definitions/web.APIError'
       summary: Add a new pet to the store
 swagger: "2.0"

@@ -152,9 +152,9 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 // @Description get token
 // @Accept  json
 // @Produce  json
-// @Success 200 {object} TokenResult
-// @Failure 401 {object} APIError
-// @Failure 500 {object} APIError
+// @Success 200 {object} web.TokenResult
+// @Failure 401 {object} web.APIError
+// @Failure 500 {object} web.APIError
 // @Router /api/v1/users/token [get]
 func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 	email, pass, ok := r.BasicAuth()
@@ -174,7 +174,7 @@ func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tkn := TokenResult{
+	tkn := web.TokenResult{
 		Token: token,
 	}
 	web.Respond(w, r, http.StatusOK, tkn)
@@ -186,9 +186,9 @@ func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 // @Accept   json
 // @Produce  json
 // @Success 200 {array} user.User
-// @Failure 401 {object} APIError
-// @Failure 403 {object} APIError
-// @Failure 500 {object} APIError
+// @Failure 401 {object} web.APIError
+// @Failure 403 {object} web.APIError
+// @Failure 500 {object} web.APIError
 // @Router /api/v1/users [get]
 func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination

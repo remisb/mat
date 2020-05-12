@@ -15,9 +15,83 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
-    "basePath": "/api/v1",
+    "host": "localhost:8090",
+    "basePath": "/",
     "paths": {
+        "/api/v1/restaurant": {
+            "get": {
+                "description": "get restaurants",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "restaurants"
+                ],
+                "summary": "List restaurant",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/restaurant.Restaurant"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/restaurant/{restaurantId}": {
+            "get": {
+                "description": "get restaurants",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "restaurants"
+                ],
+                "summary": "List restaurant",
+                "operationId": "get-restaurant-by-int",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Restaurant ID",
+                        "name": "restaurantId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/restaurant.Restaurant"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/web.APIError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/users": {
             "get": {
                 "description": "get users",
@@ -41,19 +115,19 @@
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/userapi.APIError"
+                            "$ref": "#/definitions/web.APIError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/userapi.APIError"
+                            "$ref": "#/definitions/web.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/userapi.APIError"
+                            "$ref": "#/definitions/web.APIError"
                         }
                     }
                 }
@@ -73,19 +147,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/userapi.TokenResult"
+                            "$ref": "#/definitions/web.TokenResult"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/userapi.APIError"
+                            "$ref": "#/definitions/web.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/userapi.APIError"
+                            "$ref": "#/definitions/web.APIError"
                         }
                     }
                 }
@@ -93,6 +167,29 @@
         }
     },
     "definitions": {
+        "restaurant.Restaurant": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "dateCreated": {
+                    "type": "string"
+                },
+                "dateUpdated": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "ownerUserId": {
+                    "type": "string"
+                }
+            }
+        },
         "user.User": {
             "type": "object",
             "properties": {
@@ -116,11 +213,11 @@
                 }
             }
         },
-        "userapi.APIError": {
+        "web.APIError": {
             "type": "object",
             "additionalProperties": true
         },
-        "userapi.TokenResult": {
+        "web.TokenResult": {
             "type": "object",
             "properties": {
                 "token": {

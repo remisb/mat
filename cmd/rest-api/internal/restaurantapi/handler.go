@@ -150,8 +150,15 @@ func (s *Server) handleRestaurantMenuGet(w http.ResponseWriter, r *http.Request)
 	web.Respond(w, r, http.StatusOK, menu)
 }
 
-// handlerFunc
-// endpoint: GET /api/v1/restaurant
+// handleRestaurantsGet godoc
+// @Summary List restaurant
+// @Description get restaurants
+// @Tags restaurants
+// @Accept  json
+// @Produce  json
+// @Success 200 {array} restaurant.Restaurant
+// @Failure 500 {object} web.APIError
+// @Router /api/v1/restaurant [get]
 func (s *Server) handleRestaurantsGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
 	restaurants, err := s.restaurantRepo.RetrieveRestaurantList(r.Context())
@@ -196,6 +203,17 @@ func (s *Server) handleRestaurantCreate(w http.ResponseWriter, r *http.Request) 
 	web.Respond(w, r, http.StatusCreated, uDb)
 }
 
+// handleRestaurantsGet godoc
+// @Summary List restaurant
+// @Description get restaurants
+// @ID get-restaurant-by-int
+// @Tags restaurants
+// @Accept  json
+// @Produce  json
+// @Param  restaurantId path string true "Restaurant ID"
+// @Success 200 {array} restaurant.Restaurant
+// @Failure 500 {object} web.APIError
+// @Router /api/v1/restaurant/{restaurantId} [get]
 func (s *Server) handleRestaurantGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

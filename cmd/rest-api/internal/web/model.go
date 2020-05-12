@@ -1,4 +1,4 @@
-package userapi
+package web
 
 type TokenResult struct {
 	Token string `json:"token"`
