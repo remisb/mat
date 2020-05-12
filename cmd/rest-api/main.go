@@ -190,4 +190,3 @@ func waitShutdown(serverConf conf.SrvConfig, apiServer *http.Server, serverError
 	}
 	return nil
 }
-

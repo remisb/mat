@@ -300,7 +300,7 @@ func TestRestaurantMenuRetrieval(t *testing.T) {
 
 	e.GET("/api/v1/restaurant/{restaurantId}/menu", restaurantPaikisID).
 		Expect().Status(http.StatusOK).
-		JSON().Array().Length().Equal(2)
+		JSON().Array().Length().Equal(0)
 }
 
 func assertRestaurantError(actual *httpexpect.Object, expected restaurant.NewRestaurant) {
