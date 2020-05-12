@@ -7,11 +7,14 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	_ "github.com/remisb/mat/cmd/rest-api/docs"
 	"github.com/remisb/mat/cmd/rest-api/internal/conf"
 	"github.com/remisb/mat/cmd/rest-api/internal/restaurantapi"
+	"github.com/remisb/mat/cmd/rest-api/internal/server"
 	"github.com/remisb/mat/cmd/rest-api/internal/userapi"
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/log"
+	"github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"net/http"
@@ -23,6 +26,20 @@ import (
 	"time"
 )
 
+// @title Restaurant Menu Vote API
+// @version 1.0
+// @description This is a restaurant menu voting server.
+// @termsOfService http://restaurant.io/terms/
+
+// @contact.name API Support
+// @contact.url https://restaurant.io/support
+// @contact.email support@restaurant.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /api/v1
 func main() {
 	config := conf.NewConfig()
 	if err := initLogger(config); err != nil {
@@ -135,6 +152,8 @@ func startAPIServer(cfg conf.Config, dbx *sqlx.DB,
 	// processing should be stopped.
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	r.Get("/info", server.InfoHandler)
+
 	userServer := userapi.NewServer("development", shutdownChan, dbx)
 	restaurantServer := restaurantapi.NewServer("development", shutdownChan, dbx)
 	r.Route("/api/v1/", func(r chi.Router) {
@@ -148,6 +167,10 @@ func startAPIServer(cfg conf.Config, dbx *sqlx.DB,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 	}
+
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("http://" + api.Addr + "/swagger/doc.json")),
+	)
 
 	// Start the service listening for requests.
 	go func() {

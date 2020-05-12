@@ -16,6 +16,9 @@ import (
 	"github.com/remisb/mat/internal/user"
 	"os"
 	"time"
+
+
+
 )
 
 var (
@@ -25,6 +28,20 @@ var (
 	date    = ""
 )
 
+// @title Swagger Example API
+// @version 1.0
+// @description This is a sample server Mathematic server.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://jivalabs.com/support
+// @contact.email bauzys@gmail.com
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8090
+// @BasePath /api/v1
 func main() {
 	cfg := conf.NewConfig()
 

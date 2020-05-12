@@ -1,4 +1,4 @@
-host: 0.0.0.0
+host: localhost
 port: 8090
 log: ./restaurant-api.log
 Auth:

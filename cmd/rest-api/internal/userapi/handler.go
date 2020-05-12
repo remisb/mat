@@ -147,6 +147,15 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 	web.Respond(w, r, http.StatusCreated, uDb)
 }
 
+// handleTokenGet godoc
+// @Summary Add a new pet to the store
+// @Description get token
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} TokenResult
+// @Failure 401 {object} APIError
+// @Failure 500 {object} APIError
+// @Router /api/v1/users/token [get]
 func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 	email, pass, ok := r.BasicAuth()
 	if !ok {
@@ -165,24 +174,22 @@ func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var tkn struct {
-		Token string `json:"token"`
+	tkn := TokenResult{
+		Token: token,
 	}
-	tkn.Token = token
 	web.Respond(w, r, http.StatusOK, tkn)
 }
 
-func (s *Server) handleUsersPagedGet(w http.ResponseWriter, r *http.Request) {
-	// TODO add pagination
-	users, err := s.userRepo.GetUsers(r.Context())
-	if err != nil {
-		web.RespondError(w, r, http.StatusInternalServerError, err)
-		return
-	}
-
-	web.Respond(w, r, http.StatusOK, users)
-}
-
+// handleUsersGet godoc
+// @Summary List users
+// @Description get users
+// @Accept   json
+// @Produce  json
+// @Success 200 {array} user.User
+// @Failure 401 {object} APIError
+// @Failure 403 {object} APIError
+// @Failure 500 {object} APIError
+// @Router /api/v1/users [get]
 func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
 

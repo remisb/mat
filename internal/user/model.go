@@ -6,6 +6,7 @@ import (
 )
 
 // User represents someone with access to our system.
+// User example
 type User struct {
 	ID           string         `db:"user_id" json:"id"`
 	Name         string         `db:"name" json:"name"`

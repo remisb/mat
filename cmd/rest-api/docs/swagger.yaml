@@ -1,0 +1,88 @@
+basePath: /api/v1
+definitions:
+  user.User:
+    properties:
+      date_created:
+        type: string
+      date_updated:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      roles:
+        type: string
+    type: object
+  userapi.APIError:
+    additionalProperties: true
+    type: object
+  userapi.TokenResult:
+    properties:
+      token:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@restaurant.io
+    name: API Support
+    url: https://restaurant.io/support
+  description: This is a restaurant menu voting server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://restaurant.io/terms/
+  title: Restaurant Menu Vote API
+  version: "1.0"
+paths:
+  /api/v1/users:
+    get:
+      consumes:
+      - application/json
+      description: get users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.User'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/userapi.APIError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/userapi.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/userapi.APIError'
+      summary: List users
+  /api/v1/users/token:
+    get:
+      consumes:
+      - application/json
+      description: get token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/userapi.TokenResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/userapi.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/userapi.APIError'
+      summary: Add a new pet to the store
+swagger: "2.0"
