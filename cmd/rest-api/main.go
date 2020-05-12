@@ -118,10 +118,7 @@ func startAPIServerAndWait(config conf.Config) error {
 	serverErrors := make(chan error, 1)
 
 	apiServer := startAPIServer(config, dbx, shutdown, serverErrors)
-	if err := waitShutdown(config.Server, apiServer, serverErrors, shutdown); err != nil {
-		return err
-	}
-	return nil
+	return waitShutdown(config.Server, apiServer, serverErrors, shutdown)
 }
 
 func startDebugService(config conf.Config) {
@@ -169,7 +166,7 @@ func startAPIServer(cfg conf.Config, dbx *sqlx.DB,
 	}
 
 	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("http://" + api.Addr + "/swagger/doc.json")),
+		httpSwagger.URL("http://"+api.Addr+"/swagger/doc.json")),
 	)
 
 	// Start the service listening for requests.

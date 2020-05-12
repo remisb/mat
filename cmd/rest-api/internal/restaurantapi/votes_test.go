@@ -84,8 +84,8 @@ func TestVoteTodayUser1(t *testing.T) {
 func TestVoteAuthorizedSecondPerDayForbidden(t *testing.T) {
 
 	authUser1 := e.Builder(func(req *httpexpect.Request) {
-			req.WithHeader("Authorization", "Bearer "+restaurantTest.User1.Token)
-		})
+		req.WithHeader("Authorization", "Bearer "+restaurantTest.User1.Token)
+	})
 
 	authUser1.POST("/api/v1/restaurant/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
 		WithQuery("date", "2020-03-13").
@@ -151,4 +151,3 @@ func TestVoteAuthorizedTwoPerDay(t *testing.T) {
 		JSON().Object().
 		Path("$.error.message").Equal("no token found")
 }
-

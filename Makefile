@@ -33,6 +33,9 @@ tidy:
 	go mod tidy
 	go mod vendor
 
+lint: ## go code linter with revive
+	revive ./...
+
 deps-upgrade:
 	# go get $(go list -f '{{if not (or .Main .Indirect)}}{{.Path}}{{end}}' -m all)
 	go get -u -t -d -v ./...
