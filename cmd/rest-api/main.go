@@ -19,6 +19,7 @@ import (
 	_ "net/http/pprof" // Register the pprof handlers
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 	//"github.com/remisb/mat/cmd/rest-api/internal/database"
@@ -35,47 +36,35 @@ type contextKey struct {
 
 func main() {
 	config := conf.NewConfig()
-	initLogger(config)
-	//log.SetupLogger(config.Server)
+	if err := initLogger(config); err != nil {
+		fmt.Printf("error on initLogger err: %s", err)
+		os.Exit(1)
+	}
+
 	if err := startAPIServerAndWait(*config); err != nil {
-		log.Sugar.Errorf("error :", err)
+		log.Sugar.Errorf("error on starting api server, error :", err)
 		os.Exit(1)
 	}
 }
 
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-func initLogger(config *conf.Config) {
-	logCfg := zap.NewDevelopmentConfig()
-	out := logCfg.OutputPaths
-
-	//dir, err := os.Getwd()
-	//if err != nil {
-	//	fmt.Printf("error on getting working wirectory err: %s",err)
-	//	os.Exit(1)
-	//}
-
-	//logFilePath := filepath.Join(dir, config.Server.Log)
-	//if logFilePath != "" {
-	//	f, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-	//	if err != nil {
-	//		return
-	//	}
-	//}
-
-	fmt.Printf("Log file path: %s", config.Server.Log)
-	//logFile, err := initLogFile()
-	out = append(out, config.Server.Log)
-
+func initLogger(config *conf.Config) error {
+	var logPath string
 	var err error
 
+	logCfg := zap.NewDevelopmentConfig()
+
+	if !filepath.IsAbs(config.Server.Log) {
+		logPath, err = filepath.Abs(config.Server.Log)
+		if err != nil {
+			return errors.Wrap(err, "unable to get absolute logfile path")
+		}
+	}
+
+	fmt.Printf("Log file path: %s", logPath)
+
+	logCfg.OutputPaths = append(logCfg.OutputPaths, logPath)
 	log.Logger, err = logCfg.Build()
+
 	if err != nil {
 		err := fmt.Errorf("error in log init err: %v", err)
 		fmt.Print(err)
@@ -83,8 +72,10 @@ func initLogger(config *conf.Config) {
 	log.Sugar = log.Logger.Sugar()
 	logCfg.Level.SetLevel(zapcore.DebugLevel)
 
-	log.Sugar.Infof("Loggig is set to console and file")
+	log.Sugar.Infof("Logging is set to console and file: %s", logPath)
 	log.Sugar.Sync()
+
+	return nil
 }
 
 func startDatabase(dbConf db.Config) (*sqlx.DB, error) {
