@@ -13,6 +13,17 @@ TBD
 * Docker container
 * Golang 1.14
 
+## Project setup / development and usage instructions
+
+* Install Docker on your local machine - [Get Docker](https://docs.docker.com/get-docker/)
+* Install and setup golang. v 1.14 required - [golang Gettins Started](https://golang.org/doc/install)
+* Git [Getting Started - Install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+* Install Gnu make (optional) - makes life a little bit simpler.
+
+### Provided make targets
+
+* TBD
+
 ## Project is based on the following tools, technologies and packages
 
 * [Docker container](https://www.docker.com)
