@@ -10,7 +10,6 @@ import (
 	"github.com/remisb/mat/cmd/rest-api/internal/conf"
 	"github.com/remisb/mat/cmd/rest-api/internal/restaurantapi"
 	"github.com/remisb/mat/cmd/rest-api/internal/userapi"
-	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/log"
 	"go.uber.org/zap"
@@ -22,17 +21,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
-	//"github.com/remisb/mat/cmd/rest-api/internal/database"
-	//"github.com/remisb/mat/cmd/rest-api/internal/database"
 )
-
-const validAPIKey = "abc123"
-
-var contextKeyAPIKey = &contextKey{"api-key"}
-
-type contextKey struct {
-	name string
-}
 
 func main() {
 	config := conf.NewConfig()
@@ -168,16 +157,6 @@ func startAPIServer(cfg conf.Config, dbx *sqlx.DB,
 	return &api
 }
 
-// paginate is a stub, but very possible to implement middleware logic
-// to handle the request params for handling a paginated request.
-func paginate(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// just a stub.. some ideas are to look at URL query params for something like
-		// the page number, or the limit, and send a query cursor down the chain
-		next.ServeHTTP(w, r)
-	})
-}
-
 func waitShutdown(serverConf conf.SrvConfig, apiServer *http.Server, serverErrors chan error, shutdown chan os.Signal) error {
 	// =========================================================================
 	// Shutdown
@@ -212,26 +191,3 @@ func waitShutdown(serverConf conf.SrvConfig, apiServer *http.Server, serverError
 	return nil
 }
 
-func withAPIKey(fn http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		key := r.URL.Query().Get("key")
-		if !isValidAPIKey(key) {
-			web.RespondError(w, r, http.StatusUnauthorized, "invalid API key")
-			return
-		}
-		ctx := context.WithValue(r.Context(), contextKeyAPIKey, key)
-		fn(w, r.WithContext(ctx))
-	}
-}
-
-func withCORS(fn http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Expose-Headers", "Location")
-		fn(w, r)
-	}
-}
-
-func isValidAPIKey(key string) bool {
-	return key == validAPIKey
-}
