@@ -8,11 +8,6 @@ configuration file, CLI flags or environment apps.
 
 TBD 
 
-## Requirement
-
-* Docker container
-* Golang 1.14
-
 ## Project setup / development and usage instructions
 
 * Install Docker on your local machine - [Get Docker](https://docs.docker.com/get-docker/)
@@ -20,9 +15,97 @@ TBD
 * Git [Getting Started - Install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 * Install Gnu make (optional) - makes life a little bit simpler.
 
+## Features
+
+- HTTP routing and middleware support is provided with help of [go-chi/chi](https://github.com/go-chi/chi) router. As a 
+bonus advantage `chi` router has wide set of [core middlewares](https://github.com/go-chi/chi#middlewares) with 
+additional [auxiliary middlewares & packages](https://github.com/go-chi/chi#auxiliary-middlewares--packages).
+- Database support using Postgres.
+- CRUD based pattern.
+- Account signup and user management.
+- Testing patterns.
+- Use of Docker, Docker Compose, and Makefiles.
+- TBD - ntegration with CircleCI for enterprise-level CI/CD.
+
+
+## Requirement
+
+This project contains two services and uses 3rd party services such as MongoDB and Zipkin. Docker is required to run this software on your local machine.
+
+## Downloading The Project
+
+You can use git clone to clone this repository to your computer.
+```bash
+git clone https://github.com/remisb/mat.git
+```
+
+## Installing Docker
+
+Once the project is cloned, it is important to validate the installation. 
+This project requires the use of Docker since images are created and run in a Docker-Compose environment.
+
+[Installing Docker](https://docs.docker.com/get-docker/)
+
+TBD If you are having problems installing docker reach out or jump on `Gopher Slack` for help.
+
+## Running Tests
+
+With Docker installed, navigate to the root of the project and run the test suite.
+
+NOTE - at the current time. Few tests are failing. Those failing test cases will be reviewed and updated. 
+Nevertheless application is working correctly.
+ 
+```bash
+$ make test
+```
+
+## Building And Running
+
+A makefile has also been provide to allow building, running and testing the software easier.
+
+## Building The Project
+
+Navigate to the root of the project and use the makefile to build all of the services.
+
+```bash
+$ cd $GOPATH/src/github.com/ardanlabs/service
+$ make all
+```
+
+## Running the project
+
+Navigate to the root of the project and use the makefile to run all of the services.
+
+```bash
+$ cd mat
+$ make up
+```
+
+The make up command will leverage Docker Compose to run all the services, including the 3rd party services. 
+The first time you run this command, Docker will download the required images for the 3rd party services.
+
+Default configuration is set for the developer environment which should be valid for most systems. 
+Use the `docker-compose.yaml` file to configure the services differently if necessary.
+
+## Stopping the project
+
+You can hit C in the terminal window running make up. Once that shutdown sequence is complete, it is important to 
+run the make down command.
+
+```bash
+$ <ctrl>C
+$ make down
+```
+
+Running make down will properly stop and terminate the Docker Compose session.
+
 ### Provided make targets
 
-* TBD
+* `make up`- starts docker compose containers used for development
+* `make down` - 
+* `make migrate` - Migrate attempts to bring the schema for db up to date with the migrations
+* `make seed`  - Seed runs the set of seed-data queries against db. The queries are ran in a transaction and rolled back if any fail.
+ 
 
 ## Project is based on the following tools, technologies and packages
 
@@ -58,7 +141,9 @@ up                             Builds, (re)creates, starts, and attaches to Dock
 
 ## Database setup
 
-Start PostgreSql docker container.
+Start PostgreSql docker container. 
+All tasks are dependent on the postgreSql docker container, before performing any other task `make up` 
+should be executed and DB container should accept incomming DB connections on the default PostgreSql port 5432. 
 
 ```bash
 > make up
