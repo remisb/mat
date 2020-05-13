@@ -8,7 +8,6 @@ import (
 	"github.com/remisb/mat/internal/tests"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 )
@@ -20,29 +19,15 @@ const (
 	restaurantNoFountID = "5cf37266-3473-4006-984f-9325122678b7"
 )
 
-var (
-	httpHandler      http.Handler
-	e                *httpexpect.Expect
-	restaurantServer *httptest.Server
-)
+var e *httpexpect.Expect
 
 func TestMain(m *testing.M) {
-	testSetup()
 	m.Run()
-	testShutdown()
-}
-
-func testSetup() {
-
-}
-
-func testShutdown() {
-
 }
 
 var restaurantTest *tests.Test
 
-func TestSuite(t *testing.T) {
+func TestRestaurants(t *testing.T) {
 	restaurantTest = tests.NewTest(t)
 	t.Cleanup(restaurantTest.Cleanup)
 
@@ -68,9 +53,9 @@ func TestSuite(t *testing.T) {
 	t.Run("menu create", TestCreateMenu)
 	t.Run("menu update", TestUpdateMenu)
 
+	t.Run("vote by user1", TestVoteTodayUser1)
 	t.Run("vote by anonymous user", TestVoteAnonymous)
 	t.Run("vote get today votes by anonymous", TestGetTodayVotes)
-	t.Run("vote by user 1", TestVoteTodayUser1)
 	t.Run("vote second per day is forbidden", TestVoteAuthorizedSecondPerDayForbidden)
 	t.Run("vote by user", TestVoteAuthorizedTwoPerDay)
 }
@@ -143,21 +128,6 @@ func TestGetRestaurantMenus(t *testing.T) {
 
 	errObject.Value("error").Object().
 		ValueEqual("message", "Restaurant not found")
-}
-
-func getTestServer(t *testing.T) *httptest.Server {
-	t.Helper()
-
-	if restaurantServer == nil {
-		test := tests.NewIntegration(t)
-		defer test.Teardown()
-
-		shutdown := make(chan os.Signal, 1)
-
-		api := NewServer("test", shutdown, test.Dbx)
-		restaurantServer = httptest.NewServer(api.Router)
-	}
-	return restaurantServer
 }
 
 func TestCreateRestaurant(t *testing.T) {

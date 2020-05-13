@@ -95,6 +95,8 @@ func setupTestDbContainer(t *testing.T) (*sqlx.DB, func()) {
 }
 
 func openDB(t *testing.T, c *dbtest.Container) *sqlx.DB {
+	t.Helper()
+
 	dbx, err := db.Open(db.Config{
 		User:       "postgres",
 		Password:   "postgres",

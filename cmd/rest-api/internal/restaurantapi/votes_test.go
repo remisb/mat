@@ -69,13 +69,26 @@ func TestGetTodayVotes(t *testing.T) {
 }
 
 func TestVoteTodayUser1(t *testing.T) {
+	votes := e.GET("/api/v1/restaurant/votes").
+		Expect().Status(http.StatusOK).
+		JSON().Array()
+
+	count := votes.Length().Raw()
 
 	voteResp := e.POST("/api/v1/restaurant/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys1ID).
 		WithHeader("Authorization", "Bearer "+restaurantTest.User1.Token).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
 
-	voteResp.NotEmpty()
+	voteResp.ValueEqual("success", "vote accepted")
+
+	votes2 := e.GET("/api/v1/restaurant/votes").
+		Expect().Status(http.StatusOK).
+		JSON().Array().Length().Raw()
+
+	if votes2 == count+1 {
+		t.Errorf("Expected count after new vote is: %g got: %g", count, votes2)
+	}
 }
 
 // GIVEN: Authenticated User Is allowed to vote once per day.
@@ -102,10 +115,12 @@ func TestVoteAuthorizedSecondPerDayForbidden(t *testing.T) {
 
 func TestVoteAuthorizedTwoPerDay(t *testing.T) {
 
-	e.GET("/api/v1/restaurant/votes").
+	votesRes1 := e.GET("/api/v1/restaurant/votes").
 		WithQuery("date", "2020-03-01").
 		Expect().Status(http.StatusOK).
-		JSON().Array().Length().Equal(1)
+		JSON().Array()
+	votesRes1.Length().Equal(1)
+	voteRes1Count := votesRes1.Element(0).Object().Value("votes").Number().Raw()
 
 	e.GET("/api/v1/restaurant/votes").
 		WithQuery("date", "2020-03-02").
@@ -123,31 +138,35 @@ func TestVoteAuthorizedTwoPerDay(t *testing.T) {
 		Expect().Status(http.StatusCreated).
 		JSON().Object().ValueEqual("success", "vote accepted")
 
-	e.GET("/api/v1/restaurant/votes").
+	voteRes2 := e.GET("/api/v1/restaurant/votes").
 		WithQuery("date", "2020-03-01").
 		Expect().Status(http.StatusOK).
-		JSON().Array().Length().Gt(1)
+		JSON().Array()
 
-	//Path("$.error.message").Equal("no token found")
+	voteRes2Count := voteRes2.Element(0).Object().Value("votes").Number().Raw()
+	if voteRes1Count + 1 != voteRes2Count {
+		t.Errorf("expected votes count: %g got: %g", voteRes1Count + 1, voteRes2Count)
+	}
 
 	e.POST("/api/v1/restaurant/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys2ID).
 		WithQuery("date", "2020-03-01").
 		WithHeader("Authorization", "Bearer "+restaurantTest.User1.Token).
-		Expect().Status(http.StatusForbidden).
+		Expect().Status(http.StatusCreated).
 		JSON().Object().
-		Path("$.error.message").Equal("no token found")
+		ValueEqual("success", "vote accepted")
 
 	e.POST("/api/v1/restaurant/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys2ID).
 		WithQuery("date", "2020-03-02").
 		WithHeader("Authorization", "Bearer "+restaurantTest.User2.Token).
-		Expect().Status(http.StatusUnauthorized).
+		Expect().Status(http.StatusCreated).
 		JSON().Object().
-		Path("$.error.message").Equal("no token found")
+		ValueEqual("success", "vote accepted")
+	//Path("$.error.message").Equal("no token found")
 
 	e.POST("/api/v1/restaurant/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys2ID).
 		WithQuery("date", "2020-03-02").
 		WithHeader("Authorization", "Bearer "+restaurantTest.User2.Token).
 		Expect().Status(http.StatusForbidden).
 		JSON().Object().
-		Path("$.error.message").Equal("no token found")
+		Path("$.error.message").Equal("user has already voted today")
 }
