@@ -39,7 +39,10 @@ import (
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
 // @host localhost:8090
-// @BasePath /
+// @BasePath /api/v1
+// @securityDefinitions.basic BasicAuth
+// @tokenUrl /users/token
+
 func main() {
 	config := conf.NewConfig()
 	if err := initLogger(config); err != nil {

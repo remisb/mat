@@ -36,6 +36,10 @@ tidy:
 lint: ## go code linter with revive
 	revive ./...
 
+docs-swag: ## generate REST API documentation for swagger
+	 swag i -d cmd/rest-api/ -o cmd/rest-api/docs
+
+
 deps-upgrade:
 	# go get $(go list -f '{{if not (or .Main .Indirect)}}{{.Path}}{{end}}' -m all)
 	go get -u -t -d -v ./...

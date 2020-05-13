@@ -12,7 +12,7 @@ import (
 )
 
 // RetrieveRestaurantList of menus for specified restaurant
-// endpoint: /api/v1/restaurant/:restaurantId/menu
+// endpoint: /restaurant/:restaurantId/menu
 func (s *Server) handleRestaurantMenusGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
 	// TODO menu list should be accessible to anyone
@@ -51,7 +51,7 @@ func (s *Server) handleRestaurantMenusGet(w http.ResponseWriter, r *http.Request
 
 // handleRestaurantMenusCreate is a http handler function user to create
 // or update restaurant menu for specified date.
-// endpoint: POST /api/v1/restaurant/{restaurantId}/menu
+// endpoint: POST /restaurant/{restaurantId}/menu
 func (s *Server) handleRestaurantMenuCreate(w http.ResponseWriter, r *http.Request) {
 	restaurantID := chi.URLParam(r, "restaurantId")
 	if restaurantID == "" {
@@ -158,7 +158,7 @@ func (s *Server) handleRestaurantMenuGet(w http.ResponseWriter, r *http.Request)
 // @Produce  json
 // @Success 200 {array} restaurant.Restaurant
 // @Failure 500 {object} web.APIError
-// @Router /api/v1/restaurant [get]
+// @Router /restaurant [get]
 func (s *Server) handleRestaurantsGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
 	restaurants, err := s.restaurantRepo.RetrieveRestaurantList(r.Context())
@@ -199,7 +199,6 @@ func (s *Server) handleRestaurantCreate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	//w.Header().Set("Location", "/api/v1/users/" + uDb.ID)
 	web.Respond(w, r, http.StatusCreated, uDb)
 }
 
@@ -213,7 +212,7 @@ func (s *Server) handleRestaurantCreate(w http.ResponseWriter, r *http.Request) 
 // @Param  restaurantId path string true "Restaurant ID"
 // @Success 200 {array} restaurant.Restaurant
 // @Failure 500 {object} web.APIError
-// @Router /api/v1/restaurant/{restaurantId} [get]
+// @Router /restaurant/{restaurantId} [get]
 func (s *Server) handleRestaurantGet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

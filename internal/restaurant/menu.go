@@ -116,40 +116,38 @@ func (r *Repo) MenuVotes(ctx context.Context, date time.Time) ([]Menu, error) {
 	return menus, nil
 }
 
-func (r *Repo) MenuVote(ctx context.Context, claims jwt.MapClaims, restaurantID, menuID string, date time.Time) error {
+func (r *Repo) MenuVote(ctx context.Context, userID, restaurantID, menuID string, date time.Time) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	userID := claims["sub"].(string)
+	var count int
+
+	const qSelectVote = `SELECT COUNT(*) as count FROM vote WHERE time_voted = $1 AND user_id = $2`
+	err = tx.QueryRow(qSelectVote, date, userID).Scan(&count)
+	if err != nil {
+		return errors.Wrap(err, "error on vote count scan")
+	}
+	if count > 0 {
+		return db.ErrAlreadyVoted
+	}
 
 	err = txMenuVote(ctx, tx, restaurantID, menuID, userID, date)
 	if err != nil {
-		if err := tx.Rollback(); err != nil {
-			err = errors.Wrap(err, "transaction rollback error")
+		if errT := tx.Rollback(); errT != nil {
+			log.Sugar.Errorf("error on tx rollback, error: %s", err)
 		}
-		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		log.Sugar.Errorf("error on tx commit", err)
+		log.Sugar.Errorf("error on tx commit, error: %s", err)
 	}
 	return nil
 }
 
 func txMenuVote(ctx context.Context, tx *sql.Tx, restaurantID, menuID, userID string, date time.Time) error {
-	var count int
-	const qSelectVote = `SELECT COUNT(*) as count FROM vote WHERE time_voted = $1 AND user_id = $2`
-	err := tx.QueryRow(qSelectVote, date, userID).Scan(&count)
-	if err != nil {
-		return errors.Wrap(err, "error on vote count scan")
-	}
-	if count > 0 {
-		return errors.New("user has already voted today")
-	}
-
 	const qInsertVote = `INSERT INTO vote (date, user_id, restaurant_id, time_voted)
 	    VALUES ($1, $2, $3, $4)`
 	voteResult, err := tx.ExecContext(ctx, qInsertVote, date, userID, restaurantID, date)

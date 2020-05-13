@@ -7,11 +7,11 @@ import (
 
 func (s *Server) initRoutes() {
 	if s.Router == nil {
-		s.Router = chi.NewMux()
-		s.Router.Use(web.CorsHandler)
+		users := chi.NewMux()
+		users.Use(web.CorsHandler)
 
 		// /api/v1/users/
-		s.Router.Group(func(r chi.Router) {
+		users.Group(func(r chi.Router) {
 			r.Use(web.Verifier(s.jwtAuth))
 			r.Use(web.Authenticator)
 
@@ -24,7 +24,10 @@ func (s *Server) initRoutes() {
 				r.Delete("/", s.handleUserDelete())
 			})
 		})
-		s.Router.Get("/token", s.handleTokenGet)
-		s.Router.Get("/api/v1/health", s.handleHealthGet)
+
+		users.Get("/token", s.handleTokenGet)
+		users.Get("/health", s.handleHealthGet)
+
+		s.Router = users
 	}
 }

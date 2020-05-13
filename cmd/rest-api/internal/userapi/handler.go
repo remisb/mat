@@ -143,19 +143,19 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//w.Header().Set("Location", "/api/v1/users/" + uDb.ID)
 	web.Respond(w, r, http.StatusCreated, uDb)
 }
 
 // handleTokenGet godoc
-// @Summary Add a new pet to the store
-// @Description get token
+// @Summary Get JWT token
+// @Description get jwt token
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} web.TokenResult
 // @Failure 401 {object} web.APIError
 // @Failure 500 {object} web.APIError
-// @Router /api/v1/users/token [get]
+// @Router /users/token [get]
+// @Security BasicAuth
 func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 	email, pass, ok := r.BasicAuth()
 	if !ok {
@@ -189,7 +189,7 @@ func (s *Server) handleTokenGet(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} web.APIError
 // @Failure 403 {object} web.APIError
 // @Failure 500 {object} web.APIError
-// @Router /api/v1/users [get]
+// @Router /users [get]
 func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
 

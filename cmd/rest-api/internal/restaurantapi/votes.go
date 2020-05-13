@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/jwtauth"
 	"github.com/remisb/mat/cmd/rest-api/internal/web"
+	"github.com/remisb/mat/internal/db"
 	"net/http"
 )
 
@@ -40,11 +41,13 @@ func (s *Server) handleRestaurantMenuVotePost(w http.ResponseWriter, r *http.Req
 		web.RespondError(w, r, http.StatusUnauthorized, web.ErrNoTokenFound)
 		return
 	}
+	userID := claims["sub"].(string)
 
 	parsedDate := parseURLDateDefaultNow(w, r, "date")
-	err = s.restaurantRepo.MenuVote(ctx, claims, restaurantID, menuID, parsedDate)
+
+	err = s.restaurantRepo.MenuVote(ctx, userID, restaurantID, menuID, parsedDate)
 	if err != nil {
-		if err.Error() == "user has already voted today" {
+		if err == db.ErrAlreadyVoted {
 			web.RespondError(w, r, http.StatusForbidden, err)
 			return
 		}

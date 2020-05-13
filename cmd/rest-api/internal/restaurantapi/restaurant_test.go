@@ -73,7 +73,6 @@ func TestSuite(t *testing.T) {
 	t.Run("vote by user 1", TestVoteTodayUser1)
 	t.Run("vote second per day is forbidden", TestVoteAuthorizedSecondPerDayForbidden)
 	t.Run("vote by user", TestVoteAuthorizedTwoPerDay)
-
 }
 
 func TestGetRestaurants(t *testing.T) {

@@ -16,9 +16,9 @@
         "version": "1.0"
     },
     "host": "localhost:8090",
-    "basePath": "/",
+    "basePath": "/api/v1",
     "paths": {
-        "/api/v1/restaurant": {
+        "/restaurant": {
             "get": {
                 "description": "get restaurants",
                 "consumes": [
@@ -50,7 +50,7 @@
                 }
             }
         },
-        "/api/v1/restaurant/{restaurantId}": {
+        "/restaurant/{restaurantId}": {
             "get": {
                 "description": "get restaurants",
                 "consumes": [
@@ -92,7 +92,7 @@
                 }
             }
         },
-        "/api/v1/users": {
+        "/users": {
             "get": {
                 "description": "get users",
                 "consumes": [
@@ -133,16 +133,21 @@
                 }
             }
         },
-        "/api/v1/users/token": {
+        "/users/token": {
             "get": {
-                "description": "get token",
+                "security": [
+                    {
+                        "BasicAuth": []
+                    }
+                ],
+                "description": "get jwt token",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Add a new pet to the store",
+                "summary": "Get JWT token",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -224,6 +229,11 @@
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BasicAuth": {
+            "type": "basic"
         }
     }
 }

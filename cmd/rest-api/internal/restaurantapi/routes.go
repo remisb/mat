@@ -8,17 +8,17 @@ import (
 func (s *Server) initRoutes() {
 	if s.Router == nil {
 		// /api/v1/restaurant
-		s.Router = chi.NewMux()
-		s.Router.Use(web.CorsHandler)
+		restaurants := chi.NewMux()
+		restaurants.Use(web.CorsHandler)
 
-		s.Router.Get("/votes", s.handleMenuVotesGet)
-		s.Router.Get("/menus", s.handleMenusGet)
-		s.Router.Get("/", s.handleRestaurantsGet)
-		s.Router.Get("/{restaurantId}", s.handleRestaurantGet)
-		s.Router.Get("/{restaurantId}/menu", s.handleRestaurantMenusGet)
-		s.Router.Get("/{restaurantId}/menu/:menuId", s.handleRestaurantMenuGet)
+		restaurants.Get("/votes", s.handleMenuVotesGet)
+		restaurants.Get("/menus", s.handleMenusGet)
+		restaurants.Get("/", s.handleRestaurantsGet)
+		restaurants.Get("/{restaurantId}", s.handleRestaurantGet)
+		restaurants.Get("/{restaurantId}/menu", s.handleRestaurantMenusGet)
+		restaurants.Get("/{restaurantId}/menu/:menuId", s.handleRestaurantMenuGet)
 
-		s.Router.Group(func(r chi.Router) {
+		restaurants.Group(func(r chi.Router) {
 			r.Use(web.Verifier(s.jwtAuth))
 			r.Use(web.Authenticator)
 
@@ -28,5 +28,7 @@ func (s *Server) initRoutes() {
 			r.Delete("/{restaurantId}", s.handleRestaurantDelete())
 			r.Post("/{restaurantId}/menu", s.handleRestaurantMenuCreate)
 		})
+
+		s.Router = restaurants
 	}
 }

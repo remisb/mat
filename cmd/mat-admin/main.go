@@ -39,6 +39,7 @@ var (
 
 // @host localhost:8090
 // @BasePath /api/v1
+// @securityDefinitions.basic BasicAuth
 func main() {
 	cfg := conf.NewConfig()
 

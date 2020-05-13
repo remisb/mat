@@ -1,4 +1,4 @@
-basePath: /
+basePath: /api/v1
 definitions:
   restaurant.Restaurant:
     properties:
@@ -52,7 +52,7 @@ info:
   title: Restaurant Menu Vote API
   version: "1.0"
 paths:
-  /api/v1/restaurant:
+  /restaurant:
     get:
       consumes:
       - application/json
@@ -73,7 +73,7 @@ paths:
       summary: List restaurant
       tags:
       - restaurants
-  /api/v1/restaurant/{restaurantId}:
+  /restaurant/{restaurantId}:
     get:
       consumes:
       - application/json
@@ -101,7 +101,7 @@ paths:
       summary: List restaurant
       tags:
       - restaurants
-  /api/v1/users:
+  /users:
     get:
       consumes:
       - application/json
@@ -128,11 +128,11 @@ paths:
           schema:
             $ref: '#/definitions/web.APIError'
       summary: List users
-  /api/v1/users/token:
+  /users/token:
     get:
       consumes:
       - application/json
-      description: get token
+      description: get jwt token
       produces:
       - application/json
       responses:
@@ -148,5 +148,10 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/web.APIError'
-      summary: Add a new pet to the store
+      security:
+      - BasicAuth: []
+      summary: Get JWT token
+securityDefinitions:
+  BasicAuth:
+    type: basic
 swagger: "2.0"

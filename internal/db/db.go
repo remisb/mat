@@ -17,6 +17,8 @@ var (
 	ErrAuthenticationFailure = errors.New("AuthenticationFailed")
 	// ErrForbidden used when forbitten action was tryed to perform.
 	ErrForbidden = errors.New("Attempted action is not allowed")
+	// ErrAlreadyVoted used when user is trying to place second vote for the same date.
+	ErrAlreadyVoted = errors.New("user has already voted today")
 )
 
 type Config struct {
