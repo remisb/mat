@@ -2,8 +2,8 @@ package userapi
 
 import (
 	"github.com/go-chi/chi"
-	"github.com/go-chi/jwtauth"
 	"github.com/jmoiron/sqlx"
+	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/auth"
 	"github.com/remisb/mat/internal/user"
 	"os"
@@ -11,22 +11,18 @@ import (
 
 type Server struct {
 	//Router http.Handler
-	db            *sqlx.DB
 	userRepo      *user.Repo
 	Router        *chi.Mux
 	build         string
-	jwtAuth       *jwtauth.JWTAuth
 	authenticator *auth.Authenticator
 }
 
 func NewServer(build string, shutdown chan os.Signal, db *sqlx.DB) *Server {
+	web.InitAuth()
 	userRepo := user.NewRepo(db)
-	jwtauth := jwtauth.New("HS256", []byte("secret"), nil)
 	s := Server{
-		db:            db,
 		build:         build,
-		jwtAuth:       jwtauth,
-		authenticator: auth.New(userRepo, jwtauth),
+		authenticator: auth.New(userRepo, web.Auth),
 		userRepo:      userRepo,
 	}
 

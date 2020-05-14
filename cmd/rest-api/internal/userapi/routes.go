@@ -10,9 +10,11 @@ func (s *Server) initRoutes() {
 		users := chi.NewMux()
 		users.Use(web.CorsHandler)
 
+		auth := *s.authenticator
+
 		// /api/v1/users/
 		users.Group(func(r chi.Router) {
-			r.Use(web.Verifier(s.jwtAuth))
+			r.Use(web.Verifier(auth.JWTAuth()))
 			r.Use(web.Authenticator)
 
 			r.Get("/", s.handleUsersGet)
@@ -26,7 +28,6 @@ func (s *Server) initRoutes() {
 		})
 
 		users.Get("/token", s.handleTokenGet)
-		users.Get("/health", s.handleHealthGet)
 
 		s.Router = users
 	}

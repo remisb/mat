@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/log"
 	"github.com/spf13/pflag"
@@ -77,6 +78,7 @@ func srvConfig() SrvConfig {
 }
 
 func authConfig() AuthConfig {
+	web.InitAuth()
 	return AuthConfig{
 		KeyID:          viper.GetString("auth-keyid"),
 		PrivateKeyFile: viper.GetString("auth-keyfile"),

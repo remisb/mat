@@ -8,6 +8,7 @@ import (
 )
 
 type Authenticator interface {
+	JWTAuth() *jwtauth.JWTAuth
 	NewToken(ctx context.Context, email, password string) (string, user.User, error)
 	Authenticate(ctx context.Context, email, password string) (Claims, user.User, error)
 }
@@ -45,7 +46,12 @@ func (a DefaultAuthenticator) Authenticate(ctx context.Context, email, password 
 	return claims, authenticatedUser, nil
 }
 
+func (a DefaultAuthenticator) JWTAuth() *jwtauth.JWTAuth {
+	return a.tokenAuth
+}
+
 func New(userRepo *user.Repo, auth *jwtauth.JWTAuth) *Authenticator {
+
 	da := DefaultAuthenticator{
 		tokenAuth: auth,
 		userRepo:  userRepo,

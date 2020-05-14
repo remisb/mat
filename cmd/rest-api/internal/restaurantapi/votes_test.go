@@ -144,8 +144,8 @@ func TestVoteAuthorizedTwoPerDay(t *testing.T) {
 		JSON().Array()
 
 	voteRes2Count := voteRes2.Element(0).Object().Value("votes").Number().Raw()
-	if voteRes1Count + 1 != voteRes2Count {
-		t.Errorf("expected votes count: %g got: %g", voteRes1Count + 1, voteRes2Count)
+	if voteRes1Count+1 != voteRes2Count {
+		t.Errorf("expected votes count: %g got: %g", voteRes1Count+1, voteRes2Count)
 	}
 
 	e.POST("/api/v1/restaurant/{restaurantId}/menu/{menuId}/vote", restaurantLokysID, menuLokys2ID).

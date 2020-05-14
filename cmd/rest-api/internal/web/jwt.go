@@ -10,6 +10,12 @@ var (
 	ErrNoTokenFound = errors.New("no token found")
 )
 
+var Auth *jwtauth.JWTAuth
+
+func InitAuth() {
+	Auth = jwtauth.New("HS256", []byte("secret"), nil)
+}
+
 // Verifier http middleware handler will verify a JWT string from a http request.
 //
 // Verifier will search for a JWT token in a http request, in the order:

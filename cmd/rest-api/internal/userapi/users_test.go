@@ -8,7 +8,6 @@ import (
 	"github.com/remisb/mat/internal/user"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
@@ -136,22 +135,6 @@ func TestToken(t *testing.T) {
 	e.GET("/api/v1/users/{userId}", userTest.Admin.Token).
 		Expect().
 		Status(http.StatusUnauthorized)
-}
-
-func getTestServer(t *testing.T) *httptest.Server {
-	t.Helper()
-
-	if userServer == nil {
-		test := tests.NewIntegration(t)
-
-		shutdown := make(chan os.Signal, 1)
-		api := NewServer("test", shutdown, test.Dbx)
-		userServer = httptest.NewServer(api.Router)
-
-		//adminToken = test.Token("admin@example.com", "gophers")
-		//userToken = test.Token("user@example.com", "gophers")
-	}
-	return userServer
 }
 
 func TestUsers(t *testing.T) {

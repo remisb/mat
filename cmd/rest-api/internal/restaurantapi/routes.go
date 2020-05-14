@@ -18,8 +18,9 @@ func (s *Server) initRoutes() {
 		restaurants.Get("/{restaurantId}/menu", s.handleRestaurantMenusGet)
 		restaurants.Get("/{restaurantId}/menu/:menuId", s.handleRestaurantMenuGet)
 
+		auth := *s.authenticator
 		restaurants.Group(func(r chi.Router) {
-			r.Use(web.Verifier(s.jwtAuth))
+			r.Use(web.Verifier(auth.JWTAuth()))
 			r.Use(web.Authenticator)
 
 			r.Post("/{restaurantId}/menu/{menuId}/vote", s.handleRestaurantMenuVotePost)
