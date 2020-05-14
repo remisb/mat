@@ -1,5 +1,18 @@
 basePath: /api/v1
 definitions:
+  restaurant.Menu:
+    properties:
+      date:
+        type: string
+      id:
+        type: string
+      menu:
+        type: string
+      restaurantId:
+        type: string
+      votes:
+        type: integer
+    type: object
   restaurant.Restaurant:
     properties:
       address:
@@ -13,6 +26,17 @@ definitions:
       name:
         type: string
       ownerUserId:
+        type: string
+    type: object
+  restaurant.UpdateMenu:
+    properties:
+      date:
+        type: string
+      id:
+        type: string
+      menu:
+        type: string
+      restaurantId:
         type: string
     type: object
   user.User:
@@ -73,6 +97,28 @@ paths:
       summary: List restaurant
       tags:
       - restaurants
+    post:
+      consumes:
+      - application/json
+      description: add new restaurant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/restaurant.Restaurant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.APIError'
+      summary: Add a restaurant
+      tags:
+      - restaurants
   /restaurant/{restaurantId}:
     get:
       consumes:
@@ -101,6 +147,91 @@ paths:
       summary: List restaurant
       tags:
       - restaurants
+  /restaurant/{restaurantId}/menu:
+    get:
+      consumes:
+      - application/json
+      description: get list of menus
+      parameters:
+      - description: Authorization
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Restaurant ID
+        in: path
+        name: restaurantId
+        required: true
+        type: string
+      - description: name search by q
+        in: query
+        name: date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/restaurant.Menu'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.APIError'
+      summary: List of menus
+      tags:
+      - menus
+    post:
+      consumes:
+      - application/json
+      description: add new restaurant menu for current of specified date
+      parameters:
+      - description: restaurant ID
+        in: path
+        name: restaurantId
+        required: true
+        type: string
+      - description: update menu
+        in: body
+        name: menu
+        required: true
+        schema:
+          $ref: '#/definitions/restaurant.UpdateMenu'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/restaurant.Restaurant'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/web.APIError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/web.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/web.APIError'
+      security:
+      - ApiKeyAuth: []
+      summary: Add a restaurant menu
+      tags:
+      - restaurants
+      - menus
   /users:
     get:
       consumes:
@@ -152,6 +283,10 @@ paths:
       - BasicAuth: []
       summary: Get JWT token
 securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
   BasicAuth:
     type: basic
 swagger: "2.0"

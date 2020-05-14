@@ -41,6 +41,9 @@ import (
 // @host localhost:8090
 // @BasePath /api/v1
 // @securityDefinitions.basic BasicAuth
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 // @tokenUrl /users/token
 
 func main() {

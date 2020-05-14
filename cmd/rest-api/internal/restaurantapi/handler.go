@@ -11,8 +11,21 @@ import (
 	"time"
 )
 
-// RetrieveRestaurantList of menus for specified restaurant
-// endpoint: /restaurant/:restaurantId/menu
+// handleRestaurantMenusGet is a handler function used to return list of restaurant menus of menus for specified restaurant
+// handleRestaurantMenusGet godoc
+// @Summary List of menus
+// @Description get list of menus
+// @Tags menus
+// @Accept  json
+// @Produce  json
+// @param Authorization header string true "Authorization"
+// @Param restaurantId path string true "Restaurant ID"
+// @Param date query string false "name search by q" Format
+// @Success 200 {array} restaurant.Menu
+// @Failure 400 {object} web.APIError
+// @Failure 404 {object} web.APIError
+// @Failure 500 {object} web.APIError
+// @Router /restaurant/{restaurantId}/menu [get]
 func (s *Server) handleRestaurantMenusGet(w http.ResponseWriter, r *http.Request) {
 	// TODO add pagination
 	// TODO menu list should be accessible to anyone
@@ -24,7 +37,7 @@ func (s *Server) handleRestaurantMenusGet(w http.ResponseWriter, r *http.Request
 		web.RespondError(w, r, http.StatusBadRequest, "restaurantID is undefined")
 		return
 	}
-	restaurants, err := s.restaurantRepo.RetrieveMenusByRestaurant(r.Context(), restaurantID)
+	menus, err := s.restaurantRepo.RetrieveMenusByRestaurant(r.Context(), restaurantID)
 	if err != nil {
 		switch err {
 		case db.ErrInvalidID:
@@ -46,12 +59,24 @@ func (s *Server) handleRestaurantMenusGet(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	web.Respond(w, r, http.StatusOK, restaurants)
+	web.Respond(w, r, http.StatusOK, menus)
 }
 
 // handleRestaurantMenusCreate is a http handler function user to create
-// or update restaurant menu for specified date.
-// endpoint: POST /restaurant/{restaurantId}/menu
+// handleRestaurantCreate godoc
+// @Summary Add a restaurant menu
+// @Description add new restaurant menu for current of specified date
+// @Tags restaurants,menus
+// @Accept  json
+// @Produce  json
+// @Security ApiKeyAuth
+// @Param restaurantId path string true "restaurant ID"
+// @Param menu body restaurant.UpdateMenu true "update menu"
+// @Success 200 {object} restaurant.Restaurant
+// @Failure 400 {object} web.APIError
+// @Failure 404 {object} web.APIError
+// @Failure 500 {object} web.APIError
+// @Router /restaurant/{restaurantId}/menu [post]
 func (s *Server) handleRestaurantMenuCreate(w http.ResponseWriter, r *http.Request) {
 	restaurantID := chi.URLParam(r, "restaurantId")
 	if restaurantID == "" {
@@ -170,7 +195,16 @@ func (s *Server) handleRestaurantsGet(w http.ResponseWriter, r *http.Request) {
 	web.Respond(w, r, http.StatusOK, restaurants)
 }
 
-// endpoint: POST /api/v1/restaurant
+// handleRestaurantCreate godoc
+// @Summary Add a restaurant
+// @Description add new restaurant
+// @Tags restaurants
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} restaurant.Restaurant
+// @Failure 400 {object} web.APIError
+// @Failure 500 {object} web.APIError
+// @Router /restaurant [post]
 func (s *Server) handleRestaurantCreate(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	_, claims, err := jwtauth.FromContext(ctx)
