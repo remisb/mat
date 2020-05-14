@@ -2,7 +2,35 @@
 
 Restaurant menu voting and management REST api service implemented on golang.
 
-Application is done to be fully configurable and to mach ["The Twelve-Factor App"] requirements. 
+### About
+
+Company needs internal web service for its’ employees which helps them to make a decision on lunch place. 
+Menus will be created each day and employees will vote for menu before leaving for lunch.
+
+Requirements for implementation:
+
+* There should be a REST API for:
+    * Authentication/registration (it can be assumed that only internal employees will have access to it)
+    * Creating restaurant
+    * Creating a menu for specific day
+    * Getting current day menus
+    * Voting for restaurant menu
+    * Getting results for current day.
+* Reasonable amount of automated tests 
+* Solution should be uploaded to version control
+* Solution should be built using: GoLang, HTTP framework of your choice, database of your choice (either SQL or noSQL)
+* Sufficient logging must be implemented
+* Project README.md must be created with launch instructions
+
+## Solution for this assignment
+
+I have reviewed what I have done on many of my previous solutions and decided to collect some of that experience in this
+one git repository. In addition to original reqirements I have few more in my mind. Here in this repository, 
+I will try to figure out best, up to date my implementation of golang based web server. 
+
+### Some extra requirements related with devops and architecture
+
+- Application is done to be fully configurable and to mach ["The Twelve-Factor App"] requirements. 
 All application work related properties are externalized and app work can be configured with
 configuration file, CLI flags or environment apps.
 
