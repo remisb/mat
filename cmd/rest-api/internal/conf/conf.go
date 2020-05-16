@@ -2,6 +2,7 @@ package conf
 
 import (
 	"github.com/remisb/mat/cmd/rest-api/internal/web"
+	"github.com/remisb/mat/internal/conf"
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/log"
 	"github.com/spf13/pflag"
@@ -55,7 +56,7 @@ type Config struct {
 	Server SrvConfig
 	Auth   AuthConfig
 	Db     db.Config
-	Args   Args
+	Args   conf.Args
 }
 
 func NewConfig() *Config {
@@ -65,7 +66,7 @@ func NewConfig() *Config {
 		Server: srvConfig(),
 		Auth:   authConfig(),
 		Db:     dbConfig(),
-		Args:   NewConfigArgs(os.Args[1:]),
+		Args:   conf.NewConfigArgs(os.Args[1:]),
 	}
 }
 

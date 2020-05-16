@@ -15,7 +15,20 @@ import (
 	"time"
 )
 
-func (s *Server) UserCtx(next http.Handler) http.Handler {
+type contextKey struct {
+	name string
+}
+
+func (k *contextKey) String() string {
+	return "restapi context value " + k.name
+}
+
+// Context keys
+var (
+	userCtxKey = &contextKey{"Token"}
+)
+
+func (s *Server) userCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := chi.URLParam(r, "userID")
 		ctx := r.Context()
@@ -58,7 +71,7 @@ func (s *Server) UserCtx(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx = context.WithValue(ctx, "user", user)
+		ctx = context.WithValue(ctx, userCtxKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -68,7 +81,7 @@ func (s *Server) handleUserDelete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		usr, ok := ctx.Value("user").(*user.User)
+		usr, ok := ctx.Value(userCtxKey).(*user.User)
 		if !ok {
 			err := web.NewRequestError(web.ErrNoTokenFound, http.StatusBadRequest)
 			web.RespondError(w, r, http.StatusNotFound, err)
@@ -219,7 +232,7 @@ func (s *Server) handleUsersGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUserGet(w http.ResponseWriter, r *http.Request) {
-	usr, ok := r.Context().Value("user").(*user.User)
+	usr, ok := r.Context().Value(userCtxKey).(*user.User)
 	if !ok {
 		// in general this condition is not required, it should not happen
 		err := errors.New("User not found")

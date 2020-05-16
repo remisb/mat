@@ -21,6 +21,7 @@ var (
 	ErrAlreadyVoted = errors.New("user has already voted today")
 )
 
+// Config struct is used to to store db connection settings.
 type Config struct {
 	Host       string
 	Port       string

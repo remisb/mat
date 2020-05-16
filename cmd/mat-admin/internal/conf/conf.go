@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"github.com/remisb/mat/internal/conf"
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/log"
 	"github.com/spf13/pflag"
@@ -20,7 +21,7 @@ var initConfigOnce sync.Once
 // Config struct is used to store current application configuration.
 type Config struct {
 	Db   db.Config
-	Args Args
+	Args conf.Args
 }
 
 // NewConfig initializes and returns newly created Config struct.
@@ -29,7 +30,7 @@ func NewConfig() *Config {
 
 	return &Config{
 		Db:   dbConfig(),
-		Args: NewConfigArgs(os.Args[1:]),
+		Args: conf.NewConfigArgs(os.Args[1:]),
 	}
 }
 

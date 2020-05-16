@@ -13,6 +13,7 @@ type config struct {
 
 var conf config
 
+// InitRouter is used to setup health management endpoints.
 func InitRouter(build string, db *sqlx.DB) http.Handler {
 	conf.build = build
 	conf.db = db

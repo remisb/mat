@@ -20,7 +20,7 @@ func (s *Server) initRoutes() {
 			r.Get("/", s.handleUsersGet)
 			r.Post("/", s.handleUserCreate)
 			r.Route("/{userID}", func(r chi.Router) {
-				r.Use(s.UserCtx)
+				r.Use(s.userCtx)
 				r.Get("/", s.handleUserGet)
 				r.Put("/", s.handleUserUpdate())
 				r.Delete("/", s.handleUserDelete())
