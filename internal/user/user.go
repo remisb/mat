@@ -12,7 +12,9 @@ import (
 )
 
 const (
+	// RoleAdmin is used to mark user to have Admin role.
 	RoleAdmin = "ADMIN"
+	// RoleUser is used to mark user to have a regular User role.
 	RoleUser  = "USER"
 
 	pageSize   = 10
@@ -20,10 +22,12 @@ const (
 	queryAll   = `SELECT * FROM users`
 )
 
+// Repo is a user Repository structure.
 type Repo struct {
 	db *sqlx.DB
 }
 
+// NewRepo is a factory function used to create new user Repository.
 func NewRepo(db *sqlx.DB) *Repo {
 	return &Repo{db}
 }
@@ -38,7 +42,7 @@ func ListPaged(ctx context.Context, db *sqlx.DB, page int) ([]User, error) {
 	return users, nil
 }
 
-// List retrieves a list of existing users from the database.
+// GetUsers retrieves a list of existing users from the database.
 func (r *Repo) GetUsers(ctx context.Context) ([]User, error) {
 	users := make([]User, 0)
 	if err := r.db.SelectContext(ctx, &users, queryAll); err != nil {
