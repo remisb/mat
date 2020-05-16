@@ -82,7 +82,7 @@ func (test *Test) NewToken(t *testing.T, email, pass string) UserToken {
 func setupTestDbContainer(t *testing.T) (*sqlx.DB, func()) {
 	t.Helper()
 
-	c := dbtest.StartContainer(t)
+	c := dbtest.Start(t)
 	db := openDB(t, c)
 
 	teardown := func() {

@@ -13,7 +13,8 @@ type Container struct {
 	Host string // IP:Port
 }
 
-func StartContainer(t *testing.T) *Container {
+// Start docker container for test session.
+func Start(t *testing.T) *Container {
 	t.Helper()
 
 	// > docker run -P -d postgres:11.1-alpine
