@@ -15,7 +15,7 @@ const (
 	// RoleAdmin is used to mark user to have Admin role.
 	RoleAdmin = "ADMIN"
 	// RoleUser is used to mark user to have a regular User role.
-	RoleUser  = "USER"
+	RoleUser = "USER"
 
 	pageSize   = 10
 	queryPaged = `SELECT * FROM users OFFSET $1 LIMIT $2`
