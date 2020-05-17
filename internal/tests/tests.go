@@ -38,6 +38,7 @@ type userToken struct {
 	UserID string
 }
 
+// NewTest is a factory function creates and initializes new Test structure used for integration tests.
 func NewTest(t *testing.T) *Test {
 	t.Helper()
 
@@ -64,14 +65,14 @@ func NewTest(t *testing.T) *Test {
 func (test *Test) SetupTestUsers(t *testing.T) {
 	t.Helper()
 
-	test.Admin = test.NewToken(t, "admin@example.com", "gophers")
-	test.User = test.NewToken(t, "user@example.com", "gophers")
-	test.User1 = test.NewToken(t, "user1@example.com", "gophers")
-	test.User2 = test.NewToken(t, "user2@example.com", "gophers")
+	test.Admin = test.newToken(t, "admin@example.com", "gophers")
+	test.User = test.newToken(t, "user@example.com", "gophers")
+	test.User1 = test.newToken(t, "user1@example.com", "gophers")
+	test.User2 = test.newToken(t, "user2@example.com", "gophers")
 }
 
-// NewToken generates an authenticated token for a user.
-func (test *Test) NewToken(t *testing.T, email, pass string) userToken {
+// newToken generates an authenticated token for a user.
+func (test *Test) newToken(t *testing.T, email, pass string) userToken {
 	ctx := context.Background()
 	token, user, err := test.authenticator.NewToken(ctx, email, pass)
 	if err != nil {

@@ -21,6 +21,7 @@ const (
 
 var initConfigOnce sync.Once
 
+// SrvConfig has server configuration settings.
 type SrvConfig struct {
 	Host            string
 	Port            int
@@ -31,6 +32,7 @@ type SrvConfig struct {
 	ShutdownTimeout time.Duration
 }
 
+// NewSrvConfig factory function creates and initialize new SrvConfig.
 func NewSrvConfig(host string, port int, log string) SrvConfig {
 	return SrvConfig{
 		Host:            host,
@@ -42,16 +44,19 @@ func NewSrvConfig(host string, port int, log string) SrvConfig {
 	}
 }
 
+// Addr returns server address in the form of Host:Port localhost:8080.
 func (sc SrvConfig) Addr() string {
 	return sc.Host + ":" + strconv.Itoa(sc.Port)
 }
 
+// AuthConfig structure stores authentication configuration settings.
 type AuthConfig struct {
 	KeyID          string
 	PrivateKeyFile string
 	Algorithm      string
 }
 
+// Config structure to store application configuration settings.
 type Config struct {
 	Server SrvConfig
 	Auth   AuthConfig
@@ -59,6 +64,7 @@ type Config struct {
 	Args   conf.Args
 }
 
+// NewConfig is a factory class initializes and creates new Config structure.
 func NewConfig() *Config {
 	initCliFlags()
 
