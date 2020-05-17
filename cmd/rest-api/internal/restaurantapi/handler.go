@@ -120,7 +120,7 @@ func (s *Server) handleRestaurantMenuCreate(w http.ResponseWriter, r *http.Reque
 
 	menu, err := s.restaurantRepo.CreateRestaurantMenu(ctx, updateMenu)
 	if err != nil {
-		if err != restaurant.ErrNotFound {
+		if err != restaurant.ErrMenuNotFound {
 			web.RespondError(w, r, http.StatusInternalServerError, err)
 			return
 		}

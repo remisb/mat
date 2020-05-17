@@ -38,6 +38,7 @@ func (err *Error) Error() string {
 	return err.Err.Error()
 }
 
+// CorsHandler has default cors settings for HTTP Middleware.
 var CorsHandler = cors.Handler(cors.Options{
 	AllowedOrigins:   []string{"*"},
 	AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},

@@ -9,15 +9,15 @@ import (
 )
 
 var (
-	// ErrNotFound used when user is not found
+	// ErrNotFound returned when user is not found
 	ErrNotFound = errors.New("User not found")
-	// ErrInvalidID used when passed ID has invalid format
+	// ErrInvalidID returned when passed ID has invalid format
 	ErrInvalidID = errors.New("ID is not in its proper form")
-	// ErrAuthenticationFailure used when authentication has failed
+	// ErrAuthenticationFailure returned when authentication has failed
 	ErrAuthenticationFailure = errors.New("AuthenticationFailed")
-	// ErrForbidden used when forbitten action was tryed to perform.
+	// ErrForbidden returned when forbitten action was tryed to perform.
 	ErrForbidden = errors.New("Attempted action is not allowed")
-	// ErrAlreadyVoted used when user is trying to place second vote for the same date.
+	// ErrAlreadyVoted returned when user is trying to place second vote for the same date.
 	ErrAlreadyVoted = errors.New("user has already voted today")
 )
 

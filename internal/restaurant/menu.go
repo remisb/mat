@@ -14,7 +14,8 @@ import (
 	"time"
 )
 
-var ErrNotFound = errors.New("menu not found")
+// ErrMenuNotFound returned when menu is not found
+var ErrMenuNotFound = errors.New("menu not found")
 
 // RetrieveMenu used to retrieve menu from DB by specified menuID
 func (r *Repo) RetrieveMenu(ctx context.Context, menuID string) (*Menu, error) {
@@ -41,7 +42,7 @@ func (r *Repo) readMenuByRestaurantDate(ctx context.Context, restaurantID string
 	    WHERE restaurant_id = $1 AND date = $2`
 	if err := r.db.GetContext(ctx, &m, q, restaurantID, date); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
+			return nil, ErrMenuNotFound
 		}
 
 		return nil, errors.Wrapf(err,
@@ -116,7 +117,7 @@ func (r *Repo) MenuVotes(ctx context.Context, date time.Time) ([]Menu, error) {
 	return menus, nil
 }
 
-// MenuVotes adds vote for specified restaurant menu on specified date.
+// MenuVote adds vote for specified restaurant menu on specified date.
 // If user has already voted for specified date then error  ErrAlreadyVoted will be returned.
 func (r *Repo) MenuVote(ctx context.Context, userID, restaurantID, menuID string, date time.Time) error {
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -202,7 +203,7 @@ func (r *Repo) MenuUpdate(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.D
 	// user permission check
 
 	roles := claims["roles"].(string)
-	admin := HasRole(roles, auth.RoleAdmin)
+	admin := hasRole(roles, auth.RoleAdmin)
 
 	//admin :=  claims.HasRole(auth.RoleAdmin)
 	owner := isRestaurantOwner(restaurant, claims)
@@ -224,7 +225,7 @@ func (r *Repo) CreateRestaurantMenu(ctx context.Context, um UpdateMenu) (*Menu, 
 
 	menu, err := r.readMenuByRestaurantDate(ctx, um.RestaurantID, um.Date)
 	if err != nil {
-		if err != ErrNotFound {
+		if err != ErrMenuNotFound {
 			return nil, errors.Wrapf(err,
 				"selecting menu restaurant_id: %s, date: %s",
 				um.RestaurantID, um.Date)
@@ -294,7 +295,7 @@ func (r *Repo) insertRestaurantMenu(ctx context.Context, um UpdateMenu) (*Menu, 
 	return &menu, nil
 }
 
-func HasRole(roleshas string, roles ...string) bool {
+func hasRole(roleshas string, roles ...string) bool {
 	r := strings.Split(roleshas, " ")
 	for _, has := range r {
 		for _, want := range roles {
