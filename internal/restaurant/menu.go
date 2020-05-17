@@ -116,6 +116,8 @@ func (r *Repo) MenuVotes(ctx context.Context, date time.Time) ([]Menu, error) {
 	return menus, nil
 }
 
+// MenuVotes adds vote for specified restaurant menu on specified date.
+// If user has already voted for specified date then error  ErrAlreadyVoted will be returned.
 func (r *Repo) MenuVote(ctx context.Context, userID, restaurantID, menuID string, date time.Time) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -179,6 +181,7 @@ func isRestaurantOwner(restaurant *Restaurant, claims jwt.MapClaims) bool {
 	return restaurant.OwnerUserID == claims["sub"].(string)
 }
 
+// MenuUpdate is used to update existing on create new menu for selected restaurant on specified date.
 func (r *Repo) MenuUpdate(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.DB, um UpdateMenu) (*Menu, error) {
 
 	restaurant, err := r.GetRestaurant(ctx, um.RestaurantID)
@@ -216,6 +219,7 @@ func (r *Repo) MenuUpdate(ctx context.Context, claims jwt.MapClaims, dbx *sqlx.D
 	return menu, nil
 }
 
+// CreateRestaurantMenu is used to create new menu for selected restaurant on specified date.
 func (r *Repo) CreateRestaurantMenu(ctx context.Context, um UpdateMenu) (*Menu, error) {
 
 	menu, err := r.readMenuByRestaurantDate(ctx, um.RestaurantID, um.Date)

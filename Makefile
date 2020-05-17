@@ -44,6 +44,14 @@ deps-upgrade:
 	# go get $(go list -f '{{if not (or .Main .Indirect)}}{{.Path}}{{end}}' -m all)
 	go get -u -t -d -v ./...
 
+test-restaurant:
+	go test -v -run TestRestaurants/"menu" ./cmd/rest-api/internal/restaurantapi/
+
+test-user:
+	go test -v -run TestRestaurants/"menu" ./cmd/rest-api/internal/userapi/
+
+test: test-restaurant test-user
+
 deps-cleancache:
 	go clean -modcache
 
