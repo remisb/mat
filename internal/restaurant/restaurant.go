@@ -16,16 +16,20 @@ const (
 	queryAll   = `SELECT * FROM restaurant`
 )
 
+// ErrRestaurantNotFound returned when restaurant is not found
 var ErrRestaurantNotFound = errors.New("Restaurant not found")
 
+// Repo is a restaurant Repository structure.
 type Repo struct {
 	db *sqlx.DB
 }
 
+// NewRepo is a factory function used to create new restaurant Repository.
 func NewRepo(db *sqlx.DB) *Repo {
 	return &Repo{db}
 }
 
+// GetRestaurantsPaged retrieves a list of existing restaurants from the database with pagination.
 func (r *Repo) GetRestaurantsPaged(ctx context.Context, page int) ([]Restaurant, error) {
 	offset := pageSize * (page - 1)
 	restaurants := make([]Restaurant, 0)
@@ -36,6 +40,7 @@ func (r *Repo) GetRestaurantsPaged(ctx context.Context, page int) ([]Restaurant,
 	return restaurants, nil
 }
 
+// GetRestaurants retrieves a list of existing restaurants from the database.
 func (r *Repo) GetRestaurants(ctx context.Context) ([]Restaurant, error) {
 	restaurants := make([]Restaurant, 0)
 	const q = `SELECT * FROM restaurant`
@@ -45,7 +50,7 @@ func (r *Repo) GetRestaurants(ctx context.Context) ([]Restaurant, error) {
 	return restaurants, nil
 }
 
-// RetrieveRestaurant gets the specified user from the database.
+// GetRestaurant gets the specified user from the database.
 func (r *Repo) GetRestaurant(ctx context.Context, restaurantID string) (*Restaurant, error) {
 	if _, err := uuid.Parse(restaurantID); err != nil {
 		return nil, db.ErrInvalidID

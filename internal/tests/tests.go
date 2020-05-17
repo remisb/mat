@@ -27,13 +27,13 @@ type Test struct {
 	t              *testing.T
 	Cleanup        func()
 	tokenAuth      *jwtauth.JWTAuth
-	Admin          UserToken
-	User           UserToken
-	User1          UserToken
-	User2          UserToken
+	Admin          userToken
+	User           userToken
+	User1          userToken
+	User2          userToken
 }
 
-type UserToken struct {
+type userToken struct {
 	Token  string
 	UserID string
 }
@@ -60,6 +60,7 @@ func NewTest(t *testing.T) *Test {
 	}
 }
 
+// SetupTestUsers creates users used for testing.
 func (test *Test) SetupTestUsers(t *testing.T) {
 	t.Helper()
 
@@ -69,14 +70,14 @@ func (test *Test) SetupTestUsers(t *testing.T) {
 	test.User2 = test.NewToken(t, "user2@example.com", "gophers")
 }
 
-// newToken generates an authenticated token for a user.
-func (test *Test) NewToken(t *testing.T, email, pass string) UserToken {
+// NewToken generates an authenticated token for a user.
+func (test *Test) NewToken(t *testing.T, email, pass string) userToken {
 	ctx := context.Background()
 	token, user, err := test.authenticator.NewToken(ctx, email, pass)
 	if err != nil {
 		t.Fatalf("authenticate error: %v", err)
 	}
-	return UserToken{token, user.ID}
+	return userToken{token, user.ID}
 }
 
 func setupTestDbContainer(t *testing.T) (*sqlx.DB, func()) {

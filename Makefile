@@ -17,7 +17,7 @@ down: ## Stops Docker containers and removes containers, networks, volumes, and 
 stop-all:
 	docker stop $(docker ps -aq)
 
-remove-all:
+remove-all: stop-all
 	docker rm $(docker ps -aq)
 
 migrate: ## Migrate attempts to bring the schema for db up to date with the migrations defined.

@@ -16,7 +16,9 @@ var Auth *jwtauth.JWTAuth
 
 // InitAuth creates and initializes new JWTAuth
 func InitAuth() {
-	Auth = jwtauth.New("HS256", []byte("secret"), nil)
+	if Auth == nil {
+		Auth = jwtauth.New("HS256", []byte("secret"), nil)
+	}
 }
 
 // Verifier http middleware handler will verify a JWT string from a http request.

@@ -3,16 +3,16 @@ package authorize
 import "github.com/remisb/mat/internal/auth"
 
 const (
-	CREATE = "create"
-	UPDATE = "update"
-	DELETE = "delete"
+	create = "create"
+	update = "update"
+	delete = "delete"
 )
 
-type Action string
-type Object int
+type action string
+type object int
 
 const (
-	Restaurant Object = iota
+	Restaurant object = iota
 	Menu
 	Vote
 )
@@ -45,22 +45,22 @@ type rule struct {
 }
 
 type AuthorizerNaive struct {
-	rules map[Object]map[Action]rule
+	rules map[object]map[action]rule
 }
 
 func New() *AuthorizerNaive {
 	a := AuthorizerNaive{}
-	a.addRule(Allow, auth.RoleAdmin, Restaurant, CREATE)
-	a.addRule(Allow, auth.RoleAdmin, Restaurant, UPDATE)
-	a.addRule(Allow, auth.RoleAdmin, Restaurant, DELETE)
-	a.addRule(Allow, auth.RoleAdmin, Menu, CREATE)
-	a.addRule(Allow, auth.RoleAdmin, Menu, UPDATE)
-	a.addRule(Allow, auth.RoleAdmin, Menu, DELETE)
-	a.addRule(Allow, auth.RoleAdmin, Vote, DELETE)
+	a.addRule(Allow, auth.RoleAdmin, Restaurant, create)
+	a.addRule(Allow, auth.RoleAdmin, Restaurant, update)
+	a.addRule(Allow, auth.RoleAdmin, Restaurant, delete)
+	a.addRule(Allow, auth.RoleAdmin, Menu, create)
+	a.addRule(Allow, auth.RoleAdmin, Menu, update)
+	a.addRule(Allow, auth.RoleAdmin, Menu, delete)
+	a.addRule(Allow, auth.RoleAdmin, Vote, delete)
 	return &a
 }
 
-func (a *AuthorizerNaive) addRule(effect Effect, role string, object Object, action string) {
+func (a *AuthorizerNaive) addRule(effect Effect, role string, object object, action string) {
 	//a.rules[object]
 	//rule{effect, role, action}
 }
