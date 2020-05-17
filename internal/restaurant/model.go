@@ -1,12 +1,7 @@
 package restaurant
 
 import (
-	"errors"
 	"time"
-)
-
-var (
-	ErrUnauthorized = errors.New("user is unauthorized to perform action")
 )
 
 // Restaurant entity stored in DB
@@ -37,6 +32,7 @@ type UpdateRestaurant struct {
 	Address *string `json:"address"`
 }
 
+// Menu defines and entity stored in DB.
 type Menu struct {
 	ID           string    `db:"menu_id" json:"id"`
 	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
@@ -45,22 +41,10 @@ type Menu struct {
 	Votes        int       `db:"votes" json:"votes"`
 }
 
-type NewMenu struct {
-	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
-	Date         time.Time `db:"date" json:"date"`
-	Menu         string    `db:"menu" json:"menu"`
-}
-
+// UpdateMenu used as an incoming http data to perform menu update or menu create
 type UpdateMenu struct {
 	ID           string    `db:"menu_id" json:"id"`
 	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
 	Menu         string    `db:"menu" json:"menu"`
 	Date         time.Time `db:"date" json:"date"`
-}
-
-type Vote struct {
-	Date         time.Time `db:"date" json:"date"`
-	User         string    `db:"user_id" json:"userId"`
-	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
-	TimeVoted    time.Time `db:"time_voted" json:"timeVoted"`
 }

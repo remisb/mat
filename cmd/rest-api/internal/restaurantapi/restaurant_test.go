@@ -22,6 +22,13 @@ const (
 
 var e *httpexpect.Expect
 
+//
+type newMenu struct {
+	RestaurantID string    `db:"restaurant_id" json:"restaurantId"`
+	Date         time.Time `db:"date" json:"date"`
+	Menu         string    `db:"menu" json:"menu"`
+}
+
 func TestMain(m *testing.M) {
 	m.Run()
 }
@@ -188,7 +195,7 @@ func TestCreateRestaurant(t *testing.T) {
 
 func TestCreateMenu(t *testing.T) {
 
-	newMenu := restaurant.NewMenu{
+	newMenu1 := newMenu{
 		RestaurantID: restaurantPaikisID,
 		Menu:         "Menu test content 1 for 2030.03.24 for Lokys restaurant",
 		Date:         NewDate(2020, 3, 24),
@@ -197,13 +204,13 @@ func TestCreateMenu(t *testing.T) {
 	// admin success
 	menuObj := e.POST("/api/v1/restaurant/{restaurantId}/menu", restaurantLokysID).
 		WithHeader("Authorization", "Bearer "+restaurantTest.Admin.Token).
-		WithJSON(newMenu).
+		WithJSON(newMenu1).
 		Expect().Status(http.StatusCreated).
 		JSON().Object()
 
-	assertMenuEqual(menuObj, newMenu)
+	assertMenuEqual(menuObj, newMenu1)
 
-	newMenu2 := restaurant.NewMenu{
+	newMenu2 := newMenu{
 		RestaurantID: restaurantPaikisID,
 		Menu:         "Menu test content 1 for 2030.03.24 for Lokys restaurant",
 		Date:         NewDate(2020, 3, 25),
@@ -219,7 +226,7 @@ func TestCreateMenu(t *testing.T) {
 	assertMenuEqual(menuObj, newMenu2)
 }
 
-func assertMenuEqual(actual *httpexpect.Object, expected restaurant.NewMenu) {
+func assertMenuEqual(actual *httpexpect.Object, expected newMenu) {
 	actual.Value("id").NotNull()
 	actual.ValueEqual("restaurantId", expected.RestaurantID)
 	actual.ValueEqual("menu", expected.Menu)
@@ -228,7 +235,7 @@ func assertMenuEqual(actual *httpexpect.Object, expected restaurant.NewMenu) {
 
 func TestUpdateMenu(t *testing.T) {
 
-	newMenuUpdate := restaurant.NewMenu{
+	newMenuUpdate := newMenu{
 		RestaurantID: restaurantLokysID,
 		Menu:         "Lokys menu for 2020-03-02 updated",
 		Date:         NewDate(2020, 3, 2),
