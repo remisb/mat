@@ -21,7 +21,6 @@ type Server struct {
 
 // NewServer is a factory function which creates and initializes new Restaurant REST API server.
 func NewServer(build string, shutdown chan os.Signal, db *sqlx.DB) *Server {
-	web.InitAuth()
 	userRepo := user.NewRepo(db)
 	s := Server{
 		build:          build,

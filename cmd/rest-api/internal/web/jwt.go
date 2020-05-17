@@ -7,11 +7,14 @@ import (
 )
 
 var (
+	// ErrNoTokenFound used when no expected token was found.
 	ErrNoTokenFound = errors.New("no token found")
 )
 
+// Auth is global var storing JWTAuth struct.
 var Auth *jwtauth.JWTAuth
 
+// InitAuth creates and initializes new JWTAuth
 func InitAuth() {
 	Auth = jwtauth.New("HS256", []byte("secret"), nil)
 }

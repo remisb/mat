@@ -4,6 +4,7 @@ import (
 	"github.com/gavv/httpexpect/v2"
 	"github.com/go-chi/chi"
 	"github.com/remisb/mat/cmd/rest-api/internal/userapi"
+	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/restaurant"
 	"github.com/remisb/mat/internal/tests"
 	"net/http"
@@ -30,7 +31,7 @@ var restaurantTest *tests.Test
 func TestRestaurants(t *testing.T) {
 	restaurantTest = tests.NewTest(t)
 	t.Cleanup(restaurantTest.Cleanup)
-
+	web.InitAuth()
 	r := chi.NewRouter()
 
 	userServer := userapi.NewServer("testing", nil, restaurantTest.Dbx)

@@ -3,6 +3,7 @@ package userapi
 import (
 	"github.com/gavv/httpexpect/v2"
 	"github.com/go-chi/chi"
+	"github.com/remisb/mat/cmd/rest-api/internal/web"
 	"github.com/remisb/mat/internal/auth"
 	"github.com/remisb/mat/internal/tests"
 	"github.com/remisb/mat/internal/user"
@@ -22,6 +23,7 @@ func TestSuite(t *testing.T) {
 	userTest = tests.NewTest(t)
 	t.Cleanup(userTest.Cleanup)
 
+	web.InitAuth()
 	r := chi.NewRouter()
 
 	userServer := NewServer("testing", nil, userTest.Dbx)
