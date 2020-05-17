@@ -1,5 +1,7 @@
 # mat
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/codenotary/merkletree?style=flat-square)](https://goreportcard.com/report/github.com/remisb/mat)
+
 Restaurant menu voting and management REST api service implemented on golang.
 
 ### About
