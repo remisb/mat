@@ -23,17 +23,12 @@ type DefaultAuthenticator struct {
 // NewToken performs user authentication and returns new generated token and user struct.
 func (a DefaultAuthenticator) NewToken(ctx context.Context, email, password string) (string, user.User, error) {
 
-	authenticatedUser, err := a.userRepo.Authenticate(ctx, email, password)
+	claims, authUser, err := a.Authenticate(ctx, email, password)
 	if err != nil {
-		return "", authenticatedUser, err
+		return "", authUser, err
 	}
-
-	claims := NewClaims(authenticatedUser.ID,
-		authenticatedUser.Name, authenticatedUser.Email,
-		authenticatedUser.Roles, time.Now(), time.Hour)
-
 	_, tokenString, _ := a.tokenAuth.Encode(claims)
-	return tokenString, authenticatedUser, err
+	return tokenString, authUser, err
 }
 
 // Authenticate performs user authentication and returns Claims and user struct.
