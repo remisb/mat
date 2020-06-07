@@ -295,8 +295,8 @@ func (r *Repo) insertRestaurantMenu(ctx context.Context, um UpdateMenu) (*Menu, 
 	return &menu, nil
 }
 
-func hasRole(roleshas string, roles ...string) bool {
-	r := strings.Split(roleshas, " ")
+func hasRole(rolesString string, roles ...string) bool {
+	r := strings.Split(rolesString, " ")
 	for _, has := range r {
 		for _, want := range roles {
 			if has == want {

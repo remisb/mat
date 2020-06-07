@@ -11,7 +11,6 @@ import (
 	"github.com/remisb/mat/internal/db"
 	"github.com/remisb/mat/internal/user"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -240,10 +239,6 @@ func (s *Server) handleUserGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	web.Respond(w, r, http.StatusOK, usr)
-}
-
-func rolesStrToStrSlice(roles string) []string {
-	return strings.Split(roles, ",")
 }
 
 func rolesFromClaims(claims jwt.MapClaims) ([]string, error) {
